@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(\\(Get-Content \"C:\\\\Users\\\\z.kassimi\\\\Desktop\\\\fleet-charges-app\\\\src\\\\main.tsx\"\\).Count)",
+      "PowerShell(curl *)",
+      "PowerShell(curl.exe -I \"https://gefkfbdmnlfsqqjxqtdn.supabase.co\")",
+      "PowerShell(\\(Get-Content \"C:\\\\Users\\\\z.kassimi\\\\Desktop\\\\fleet-charges-app\\\\src\\\\main.tsx\"\\) -match 'fc-form-label' | Select-Object -First 10)",
+      "PowerShell(Select-String *)",
+      "PowerShell(head *)",
+      "WebFetch(domain:cdn.dribbble.com)",
+      "Bash(npx *)",
+      "Bash(npm list *)",
+      "Bash(npm install *)",
+      "WebFetch(domain:dribbble.com)"
+    ]
+  }
+}

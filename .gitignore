@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Vercel
+.vercel
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local scratch / generated downloads
+*.xlsx
+session-*.md
+chk.cjs
+
+# OS / editor
+Thumbs.db
+.DS_Store
+
+.vercel
+.env*
+
+# Tooling / agent scratch (not part of the app)
+package/
+*.tgz
+.superpowers/
+.clawhub/
