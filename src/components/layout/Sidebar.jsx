@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import {
   LayoutGrid01,
   Truck01,
-  Route,
   Clock,
   Download01,
   Upload01,
@@ -26,7 +25,6 @@ export default function Sidebar({ isOpen, onClose }) {
     { icon: Truck01, label: t('sidebar.vehicles'), path: '/vehicles', scope: 'vehicles' },
     { icon: Download01, label: t('sidebar.import'), path: '/import', scope: 'import' },
     { icon: Upload01, label: t('sidebar.export'), path: '/export', scope: 'export' },
-    { icon: Route, label: t('sidebar.missions'), path: '/missions', scope: 'missions' },
     // Operations users land on the operations book; a requester only has the
     // demand book, so the same entry points them straight at their demands.
     {

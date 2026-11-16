@@ -40,6 +40,7 @@ function useFormDirty(active, value, baseline) {
   const { setDirty } = useUnsaved()
   useEffect(() => {
     setDirty(!!active && JSON.stringify(value) !== JSON.stringify(baseline))
+    return () => setDirty(false)
   }, [active, value, baseline, setDirty])
 }
 
@@ -1152,6 +1153,54 @@ function TachographItemsTab({ t }) {
   )
 }
 
+function TachographSettingsTab({ t }) {
+  const { showGuard } = useUnsaved()
+  const [subTab, setSubTab] = useState('items')
+
+  const subTabs = [
+    { id: 'items', label: t('settings.tachographItems'), icon: Tool },
+    { id: 'suppliers', label: t('settings.tachographSuppliersAndPrices'), icon: Building01 },
+  ]
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div
+        role="tablist"
+        aria-label={t('settings.tachograph')}
+        className="inline-flex w-full max-w-md rounded-lg border border-border bg-muted/40 p-1 sm:w-auto sm:self-start"
+      >
+        {subTabs.map((tab) => {
+          const Icon = tab.icon
+          const active = subTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => {
+                if (subTab !== tab.id) showGuard(() => setSubTab(tab.id))
+              }}
+              className={cn(
+                'inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors sm:flex-none',
+                active
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Icon className="size-4 shrink-0" />
+              <span>{tab.label}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {subTab === 'items' && <TachographItemsTab t={t} />}
+      {subTab === 'suppliers' && <TachographSuppliersTab />}
+    </div>
+  )
+}
+
 function AccountTab({ t }) {
   const { user: currentUser, login: refreshSession } = useAuth()
   const { showToast } = useToast()
@@ -1331,15 +1380,14 @@ export default function Settings({ initialTab }) {
     vehicleTypes: { icon: Truck, labelKey: 'settings.vehicleTypes', descKey: 'settings.descVehicleTypes' },
     fuelTypes: { icon: Fuel, labelKey: 'settings.fuelTypes', descKey: 'settings.descFuelTypes' },
     chargeTypes: { icon: Receipt, labelKey: 'settings.chargeTypes', descKey: 'settings.descChargeTypes' },
-    tachographItems: { icon: Tool, labelKey: 'settings.tachographItems', descKey: 'settings.descTachographItems' },
-    tachographSuppliers: { icon: Building01, labelKey: 'settings.tachographSuppliers', descKey: 'settings.descTachographSuppliers' },
+    tachograph: { icon: Tool, labelKey: 'settings.tachograph', descKey: 'settings.descTachograph' },
     account: { icon: User, labelKey: 'settings.myAccount', descKey: 'settings.descAccount' },
   }
 
   const adminKeys = [
     ...(isAdmin ? ['users'] : []),
     ...(canSeeAdminTabs ? ['categories', 'vehicleTypes', 'fuelTypes', 'chargeTypes'] : []),
-    ...(canSeeAdminTabs || can('addTachograph') || can('editTachograph') ? ['tachographItems', 'tachographSuppliers'] : []),
+    ...(canSeeAdminTabs || can('addTachograph') || can('editTachograph') ? ['tachograph'] : []),
   ]
   const tabKeys = [...adminKeys, 'account']
 
@@ -1405,8 +1453,7 @@ export default function Settings({ initialTab }) {
           {effectiveTab === 'vehicleTypes' && <VehicleTypesTab t={t} />}
           {effectiveTab === 'fuelTypes' && <FuelTypesTab t={t} />}
           {effectiveTab === 'chargeTypes' && <ChargeTypesTab t={t} />}
-          {effectiveTab === 'tachographItems' && <TachographItemsTab t={t} />}
-          {effectiveTab === 'tachographSuppliers' && <TachographSuppliersTab />}
+          {effectiveTab === 'tachograph' && <TachographSettingsTab t={t} />}
           {effectiveTab === 'account' && <AccountTab t={t} />}
         </div>
       </div>

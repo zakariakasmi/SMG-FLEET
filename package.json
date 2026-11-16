@@ -4,7 +4,7 @@
     "description":  "SMG Fleet Management System - Manage vehicles and regulatory charges",
     "type":  "module",
     "scripts":  {
-                    "dev":  "vite",
+                    "dev":  "vite --port 3000 --host 0.0.0.0",
                     "build":  "vite build",
                     "lint":  "eslint src --ext js,jsx",
                     "preview":  "vite preview",

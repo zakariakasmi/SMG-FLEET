@@ -9,7 +9,6 @@ import {
   BarChart03 as BarChart,
   Grid01 as Grid,
   Columns01,
-  Shield01,
   CheckCircle,
   ArrowLeft,
   ArrowRight,
@@ -37,7 +36,6 @@ import Card from '../../components/ui/Card'
 import Table from '../../components/ui/Table'
 import EmptyState from '../../components/ui/EmptyState'
 import ErrorState from '../../components/ui/ErrorState'
-import GendarmerieExport from '../../components/missions/GendarmerieExport'
 
 const SF = { strokeWidth: 1.75, fill: 'none' }
 const PREVIEW_PAGE_SIZE = 10
@@ -77,16 +75,6 @@ const EXPORT_TYPES = [
     descKey: 'export.typeFinancialDesc',
     defaultColumns: ['code', 'registration_plate', 'vehicle_type', 'brand', 'puissance_fiscale', 'ptac', 'category_name', 'purchase_date'],
     includeCharges: true,
-  },
-  {
-    // Not a vehicle export — its own panel (GendarmerieExport) replaces the
-    // vehicle stepper when selected. defaultColumns is intentionally empty.
-    id: 'gendarmerie',
-    icon: Shield01,
-    titleKey: 'export.typeGendarmerie',
-    descKey: 'export.typeGendarmerieDesc',
-    defaultColumns: [],
-    includeCharges: false,
   },
 ]
 
@@ -864,16 +852,7 @@ export default function Export() {
     )
   }
 
-  const page = exportType === 'gendarmerie' ? (
-    <div className="mx-auto max-w-5xl space-y-6 pb-16">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">{t('export.title')}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t('export.subtitle')}</p>
-      </div>
-
-      <GendarmerieExport onBack={() => handleSwitchType('vehicles-charges')} />
-    </div>
-  ) : (
+  const page = (
     <div className="mx-auto max-w-5xl space-y-6 pb-16">
       <div>
         <h1 className="text-2xl font-bold text-foreground">{t('export.title')}</h1>

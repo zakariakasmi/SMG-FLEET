@@ -10,10 +10,6 @@ export const PERMISSION_SCOPES = [
   { key: 'import', labelKey: 'settings.permImport' },
   { key: 'export', labelKey: 'settings.permExport' },
   { key: 'manageTypes', labelKey: 'settings.permManageTypes' },
-  { key: 'missions', labelKey: 'settings.permMissions' },
-  { key: 'addMissions', labelKey: 'settings.permAddMissions' },
-  { key: 'editMissions', labelKey: 'settings.permEditMissions' },
-  { key: 'deleteMissions', labelKey: 'settings.permDeleteMissions' },
   // Operations book: the tachograph operations themselves.
   { key: 'tachograph', labelKey: 'settings.permTachograph' },
   { key: 'addTachograph', labelKey: 'settings.permAddTachograph' },
@@ -45,10 +41,6 @@ export const PERMISSION_GROUPS = [
   {
     labelKey: 'settings.permCharges',
     keys: ['charges', 'addCharges', 'editCharges', 'deleteCharges'],
-  },
-  {
-    labelKey: 'settings.permMissions',
-    keys: ['missions', 'addMissions', 'editMissions', 'deleteMissions'],
   },
   {
     labelKey: 'settings.permGroupTachographOperations',

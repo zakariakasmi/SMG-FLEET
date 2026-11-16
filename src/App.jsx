@@ -14,11 +14,6 @@ import VehicleDetail from './pages/vehicles/VehicleDetail'
 import VehicleForm from './pages/vehicles/VehicleForm'
 import Import from './pages/import/Import'
 import Export from './pages/export/Export'
-import MissionsList from './pages/missions/MissionsList'
-import MissionDetail from './pages/missions/MissionDetail'
-import MissionForm from './pages/missions/MissionForm'
-import DriverMerge from './pages/missions/DriverMerge'
-import TypeMapping from './pages/missions/TypeMapping'
 import TachographOperations from './pages/tachograph/TachographOperations'
 import TachographDemands from './pages/tachograph/TachographDemands'
 import Settings from './pages/settings/Settings'
@@ -188,12 +183,6 @@ function AppRoutes() {
         <Route path="vehicles/:code/edit" element={<PermittedRoute scope="editVehicles"><VehicleForm /></PermittedRoute>} />
         <Route path="import" element={<PermittedRoute scope="import"><Import /></PermittedRoute>} />
         <Route path="export" element={<PermittedRoute scope="export"><Export /></PermittedRoute>} />
-        <Route path="missions" element={<PermittedRoute scope="missions"><MissionsList /></PermittedRoute>} />
-        <Route path="missions/drivers" element={<PermittedRoute scope="missions"><DriverMerge /></PermittedRoute>} />
-        <Route path="missions/types" element={<PermittedRoute scope="missions"><TypeMapping /></PermittedRoute>} />
-        <Route path="missions/new" element={<PermittedRoute scope="addMissions"><MissionForm /></PermittedRoute>} />
-        <Route path="missions/:id/edit" element={<PermittedRoute scope="editMissions"><MissionForm /></PermittedRoute>} />
-        <Route path="missions/:id" element={<PermittedRoute scope="missions"><MissionDetail /></PermittedRoute>} />
         <Route path="tachograph" element={<PermittedRoute scope="tachograph" fallback="/tachograph/demandes"><TachographOperations /></PermittedRoute>} />
         <Route path="tachograph/demandes" element={<PermittedRoute scopes={DEMAND_ACCESS_SCOPES}><TachographDemands /></PermittedRoute>} />
         {/* Old tab routes (due / suppliers / tariffs) are gone: send bookmarks

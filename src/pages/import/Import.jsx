@@ -34,7 +34,6 @@ import Card from '../../components/ui/Card'
 import Table from '../../components/ui/Table'
 import ErrorState from '../../components/ui/ErrorState'
 import Select from '../../components/ui/Select'
-import LedgerImport from './LedgerImport'
 
 const SF = { strokeWidth: 1.75, fill: 'none' }
 const PREVIEW_PAGE_SIZE = 10
@@ -583,15 +582,6 @@ export default function Import() {
         >
           {t('import.charges')}
         </button>
-        <button
-          onClick={() => switchType('ledger')}
-          className={`flex-1 rounded-md px-4 py-2.5 text-[15px] font-medium transition-all ${
-            importType === 'ledger' ? 'bg-primary text-primary-foreground shadow-sm' : ''
-          }`}
-          style={importType !== 'ledger' ? { color: mutedColor } : undefined}
-        >
-          {t('import.ledger')}
-        </button>
       </div>
 
       <FileUpload
@@ -1108,10 +1098,7 @@ export default function Import() {
         <p className="mt-1 text-sm" style={{ color: mutedColor }}>{t('import.subtitle')}</p>
       </div>
 
-      {importType === 'ledger' ? (
-        <LedgerImport importType={importType} onChangeType={switchType} />
-      ) : (
-        <>
+      <>
       {/* Renew to next year */}
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -1176,8 +1163,7 @@ export default function Import() {
       {step === 'mapping' && renderMapping()}
       {step === 'review' && renderReview()}
       {step === 'result' && renderResult()}
-        </>
-      )}
+      </>
     </div>
   )
 }

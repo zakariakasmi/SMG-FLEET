@@ -92,6 +92,7 @@ const emptyItem = (vehicleId = '', vehiclePlate = '') => ({
   vehicle_query: vehiclePlate,
   quantity: '1',
   unit_price: '',
+  price_auto: false,
 })
 
 const itemTotal = (item) =>
@@ -129,6 +130,7 @@ export default function TachographOperations() {
   const [rows, setRows] = useState([])
   const [suppliers, setSuppliers] = useState([])
   const [types, setTypes] = useState([])
+  const [tariffs, setTariffs] = useState([])
   const [vehicles, setVehicles] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -157,15 +159,17 @@ export default function TachographOperations() {
     setLoading(true)
     setError(false)
     try {
-      const [operations, supplierRows, typeRows, vehicleRows] = await Promise.all([
+      const [operations, supplierRows, typeRows, tariffRows, vehicleRows] = await Promise.all([
         tachographApi.listOperations(),
         tachographApi.listSuppliers(),
         tachographApi.listOperationTypes(),
+        tachographApi.listTariffs(),
         vehiclesApi.listKeys(),
       ])
       setRows(operations || [])
       setSuppliers(supplierRows || [])
       setTypes(typeRows || [])
+      setTariffs(tariffRows || [])
       setVehicles(vehicleRows || [])
     } catch (e) {
       console.error('Error loading tachograph operations:', e)
@@ -231,6 +235,7 @@ export default function TachographOperations() {
               vehicle_query: line.vehicle?.registration_plate || '',
               quantity: '1',
               unit_price: '',
+              price_auto: false,
             }))
           : [emptyItem()]
         setEditing(null)
@@ -288,6 +293,7 @@ export default function TachographOperations() {
           : item.price == null
             ? ''
             : String(Number(item.price)),
+      price_auto: false,
     }))
     setEditing(row)
     setLinkedDemand(row.demand || null)
@@ -337,9 +343,61 @@ export default function TachographOperations() {
     [types, i18n.language]
   )
 
+  const findTariffPrice = useCallback(
+    (supId, typeId) => {
+      if (!supId || !typeId) return null
+      const match = tariffs.find(
+        (tf) =>
+          String(tf.supplier_id) === String(supId) &&
+          String(tf.operation_type_id) === String(typeId)
+      )
+      return match && match.price != null ? String(Number(match.price)) : null
+    },
+    [tariffs]
+  )
+
+  const handleSupplierChange = (nextSupplierId) => {
+    setForm((prev) => ({
+      ...prev,
+      supplier_id: nextSupplierId,
+      items: prev.items.map((item) => {
+        if (!item.operation_type_id) return item
+        const tariffPrice = findTariffPrice(nextSupplierId, item.operation_type_id)
+        if (item.unit_price === '' || item.price_auto) {
+          if (tariffPrice !== null) {
+            return { ...item, unit_price: tariffPrice, price_auto: true }
+          }
+          if (item.price_auto) {
+            return { ...item, unit_price: '', price_auto: false }
+          }
+        }
+        return item
+      }),
+    }))
+  }
+
   const patchItemType = (index, value) => {
     const match = matchOperationType(value)
-    updateItem(index, { type_query: value, operation_type_id: match ? String(match.id) : '' })
+    setForm((prev) => ({
+      ...prev,
+      items: prev.items.map((item, i) => {
+        if (i !== index) return item
+        const nextTypeId = match ? String(match.id) : ''
+        const tariffPrice = nextTypeId ? findTariffPrice(prev.supplier_id, nextTypeId) : null
+        const shouldAutofill =
+          tariffPrice !== null && (item.unit_price === '' || item.price_auto)
+        return {
+          ...item,
+          type_query: value,
+          operation_type_id: nextTypeId,
+          ...(shouldAutofill
+            ? { unit_price: tariffPrice, price_auto: true }
+            : item.price_auto && nextTypeId !== item.operation_type_id
+              ? { unit_price: '', price_auto: false }
+              : {}),
+        }
+      }),
+    }))
   }
 
   const updateItem = (index, patch) => {
@@ -687,12 +745,12 @@ export default function TachographOperations() {
               <thead className="bg-muted/40">
                 <tr className="text-left text-[11px] uppercase tracking-wide text-muted-foreground">
                   <th className="px-3 py-2 font-medium">{t('tachograph.items')}</th>
-                  <th className="px-3 py-2 font-medium">{t('tachograph.vehicle')}</th>
-                  <th className="px-3 py-2 text-right font-medium">{t('tachograph.quantity')}</th>
-                  <th className="px-3 py-2 text-right font-medium">{t('tachograph.unitPriceHT')}</th>
-                  <th className="px-3 py-2 text-right font-medium">{t('tachograph.amountHT')}</th>
-                  <th className="px-3 py-2 text-right font-medium">{t('tachograph.vat')}</th>
-                  <th className="px-3 py-2 text-right font-medium">{t('tachograph.totalTTC')}</th>
+                  <th className="whitespace-nowrap px-3 py-2 font-medium">{t('tachograph.vehicle')}</th>
+                  <th className="whitespace-nowrap px-3 py-2 text-right font-medium">{t('tachograph.quantity')}</th>
+                  <th className="whitespace-nowrap px-3 py-2 text-right font-medium">{t('tachograph.unitPriceHTShort')}</th>
+                  <th className="whitespace-nowrap px-3 py-2 text-right font-medium">{t('tachograph.amountHT')}</th>
+                  <th className="whitespace-nowrap px-3 py-2 text-right font-medium">{t('tachograph.vat')}</th>
+                  <th className="whitespace-nowrap px-3 py-2 text-right font-medium">{t('tachograph.totalTTC')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -704,13 +762,15 @@ export default function TachographOperations() {
                       <td className="px-3 py-2 text-foreground">
                         {operationTypeLabel(line.operation_type, i18n.language) || '—'}
                       </td>
-                      <td className="px-3 py-2 text-foreground">
+                      <td className="whitespace-nowrap px-3 py-2 text-foreground">
                         {vehicle ? (
-                          <span>
-                            {vehicle.code}
-                            <span className="ml-1 text-[12px] text-muted-foreground">
-                              {vehicle.registration_plate}
-                            </span>
+                          <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
+                            <span>{vehicle.code}</span>
+                            {vehicle.registration_plate && (
+                              <span className="text-[12px] text-muted-foreground">
+                                {vehicle.registration_plate}
+                              </span>
+                            )}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">—</span>
@@ -1187,7 +1247,7 @@ export default function TachographOperations() {
             options={supplierOptions}
             placeholder={t('tachograph.pickSupplier')}
             value={form.supplier_id}
-            onChange={(e) => setForm({ ...form, supplier_id: e.target.value })}
+            onChange={(e) => handleSupplierChange(e.target.value)}
           />
           <Input
             label={t('tachograph.performedOn')}
@@ -1323,7 +1383,7 @@ export default function TachographOperations() {
                       min="0"
                       step="0.01"
                       value={item.unit_price}
-                      onChange={(e) => updateItem(index, { unit_price: e.target.value })}
+                      onChange={(e) => updateItem(index, { unit_price: e.target.value, price_auto: false })}
                       placeholder={t('tachograph.unitPriceHT')}
                       aria-label={t('tachograph.unitPriceHT')}
                     />

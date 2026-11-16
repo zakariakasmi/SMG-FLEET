@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { usersApi } from '../services/api'
+import { isMockSupabase } from '../services/supabase'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 
@@ -112,6 +113,12 @@ export default function Login() {
               {t('login.signIn')}
             </Button>
           </form>
+
+          {isMockSupabase && (
+            <p className="text-center text-xs mt-4 text-muted-foreground">
+              Demo: <span className="font-mono">admin@smg.local</span> / <span className="font-mono">admin</span>
+            </p>
+          )}
 
           <p
             className="text-center text-xs mt-6 text-muted-foreground/50"
