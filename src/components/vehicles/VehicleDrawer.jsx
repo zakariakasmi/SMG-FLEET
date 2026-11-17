@@ -165,6 +165,10 @@ export default function VehicleDrawer({ vehicle, isOpen, onClose, onChanged }) {
                     value={detailVehicle.registration_plate || '-'}
                   />
                   <Field
+                    label={t('vehicles.wwPlate')}
+                    value={detailVehicle.ww_plate || '-'}
+                  />
+                  <Field
                     label={t('vehicles.vehicleType')}
                     value={getVehicleTypeLabel(detailVehicle.vehicle_type)}
                   />

@@ -11,6 +11,11 @@ export const vehicleSchema = z.object({
     .string()
     .min(1, 'La plaque d\'immatriculation est requise')
     .max(50, 'La plaque ne doit pas dépasser 50 caractères'),
+  ww_plate: z
+    .string()
+    .max(50, 'La plaque WW ne doit pas dépasser 50 caractères')
+    .optional()
+    .or(z.literal('')),
   vehicle_type: z.string().min(1, 'Le type de véhicule est requis'),
   brand: z.string().min(1, 'La marque est requise'),
   fuel_type: z.string().min(1, 'Le type de carburant est requis'),

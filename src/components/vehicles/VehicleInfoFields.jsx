@@ -40,6 +40,13 @@ export default function VehicleInfoFields({
         {...register('registration_plate')}
       />
 
+      <Input
+        label={t('vehicles.wwPlate')}
+        placeholder={t('vehicles.wwPlateExample')}
+        error={errors.ww_plate?.message}
+        {...register('ww_plate')}
+      />
+
       <Controller
         name="vehicle_type"
         control={control}

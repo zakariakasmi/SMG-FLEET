@@ -259,6 +259,7 @@ export type Database = {
           type_id: number | null
           updated_at: string | null
           vehicle_type: string
+          ww_plate: string | null
         }
         Insert: {
           brand: string
@@ -278,6 +279,7 @@ export type Database = {
           type_id?: number | null
           updated_at?: string | null
           vehicle_type: string
+          ww_plate?: string | null
         }
         Update: {
           brand?: string
@@ -297,6 +299,7 @@ export type Database = {
           type_id?: number | null
           updated_at?: string | null
           vehicle_type?: string
+          ww_plate?: string | null
         }
         Relationships: [
           {
@@ -354,6 +357,7 @@ export type Database = {
           type_id: number | null
           type_name: string | null
           vehicle_type: string | null
+          ww_plate?: string | null
         }
         Relationships: [
           {

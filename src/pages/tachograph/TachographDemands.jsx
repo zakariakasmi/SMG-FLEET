@@ -398,10 +398,15 @@ export default function TachographDemands() {
       label: t('tachograph.demandReference'),
       sortable: true,
       render: (row) => (
-        <div>
-          <p className="font-semibold text-foreground">{row.reference}</p>
-          <p className="text-[12px] text-muted-foreground">{formatDate(row.requested_on)}</p>
-        </div>
+        <span className="whitespace-nowrap font-semibold text-foreground">{row.reference}</span>
+      ),
+    },
+    {
+      key: 'requested_on',
+      label: t('tachograph.demandRequestedOn'),
+      sortable: true,
+      render: (row) => (
+        <span className="whitespace-nowrap">{formatDate(row.requested_on)}</span>
       ),
     },
     {

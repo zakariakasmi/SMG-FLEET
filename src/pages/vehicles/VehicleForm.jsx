@@ -96,6 +96,7 @@ export default function VehicleForm() {
     defaultValues: {
       code: '',
       registration_plate: '',
+      ww_plate: '',
       vehicle_type: '',
       brand: '',
       fuel_type: '',
@@ -160,6 +161,7 @@ export default function VehicleForm() {
       reset({
         code: vehicle.code,
         registration_plate: vehicle.registration_plate,
+        ww_plate: vehicle.ww_plate || '',
         vehicle_type: vehicle.vehicle_type,
         brand: vehicle.brand,
         fuel_type: vehicle.fuel_type,
@@ -185,6 +187,7 @@ export default function VehicleForm() {
       reset({
         code: '',
         registration_plate: vehicle.registration_plate,
+        ww_plate: vehicle.ww_plate || '',
         vehicle_type: vehicle.vehicle_type,
         brand: vehicle.brand,
         fuel_type: vehicle.fuel_type,
@@ -279,6 +282,7 @@ export default function VehicleForm() {
 
     const vehicleData = {
       ...data,
+      ww_plate: data.ww_plate?.trim() || null,
       vehicle_type: vehicleType.name,
       type_id: vehicleType.id,
       purchase_date: data.purchase_date || null,

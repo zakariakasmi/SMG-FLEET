@@ -12,6 +12,7 @@ import VehicleInfoFields from './VehicleInfoFields'
 const DEFAULT_VALUES = {
   code: '',
   registration_plate: '',
+  ww_plate: '',
   vehicle_type: '',
   brand: '',
   fuel_type: '',
@@ -53,6 +54,7 @@ export default function EditVehicleModal({ vehicle, isOpen, onClose, onSuccess }
     reset({
       code: vehicle.code,
       registration_plate: vehicle.registration_plate,
+      ww_plate: vehicle.ww_plate || '',
       vehicle_type: vehicle.vehicle_type,
       brand: vehicle.brand,
       fuel_type: vehicle.fuel_type,
@@ -177,13 +179,14 @@ export default function EditVehicleModal({ vehicle, isOpen, onClose, onSuccess }
 
       const vehicleData = {
         ...data,
+        ww_plate: data.ww_plate?.trim() || null,
         vehicle_type: vehicleType.name,
         type_id: vehicleType.id,
         category_id: Number(categoryId),
         fuel_type_id: fuelTypeId,
-      purchase_date: data.purchase_date || null,
-      puissance_fiscale: data.puissance_fiscale ? Number(data.puissance_fiscale) : null,
-      ptac: data.ptac ? Number(data.ptac) : null,
+        purchase_date: data.purchase_date || null,
+        puissance_fiscale: data.puissance_fiscale ? Number(data.puissance_fiscale) : null,
+        ptac: data.ptac ? Number(data.ptac) : null,
       }
 
       await vehiclesApi.update(vehicle.id, vehicleData)

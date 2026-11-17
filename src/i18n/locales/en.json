@@ -141,6 +141,8 @@
     "codeExample": "e.g., T535",
     "regPlate": "Registration Plate",
     "plateExample": "e.g., AB-12345",
+    "wwPlate": "WW Plate",
+    "wwPlateExample": "e.g., WW-123456",
     "vehicleType": "Vehicle Type",
     "typeExample": "e.g., camion, minibus, van...",
     "brandExample": "e.g., Mercedes, Volvo, Iveco...",

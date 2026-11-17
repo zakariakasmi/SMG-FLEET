@@ -141,6 +141,8 @@
     "codeExample": "ex., T535",
     "regPlate": "Plaque d'immatriculation",
     "plateExample": "ex., AB-12345",
+    "wwPlate": "Plaque WW",
+    "wwPlateExample": "ex., WW-123456",
     "vehicleType": "Type de véhicule",
     "typeExample": "ex., camion, minibus, van...",
     "brandExample": "ex., Mercedes, Volvo, Iveco...",
