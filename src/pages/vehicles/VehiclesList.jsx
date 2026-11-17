@@ -243,6 +243,12 @@ export default function VehiclesList() {
       render: (row) => row.ww_plate || '-',
     },
     {
+      key: 'chassis_number',
+      label: t('vehicles.chassisNumber'),
+      sortable: true,
+      render: (row) => row.chassis_number || '-',
+    },
+    {
       key: 'vehicle_type',
       label: t('vehicles.vehicleType'),
       sortable: true,

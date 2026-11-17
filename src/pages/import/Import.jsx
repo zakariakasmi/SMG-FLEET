@@ -387,6 +387,8 @@ export default function Import() {
             const payload = {
               code: row.values.code,
               registration_plate: row.values.registration_plate,
+              ww_plate: row.values.ww_plate || null,
+              chassis_number: row.values.chassis_number || null,
               vehicle_type: vehicleType?.name ?? row.values.vehicle_type,
               type_id: vehicleType?.id ?? null,
               brand: row.values.brand,
@@ -522,6 +524,8 @@ export default function Import() {
       const headers = [
         'code',
         'registration_plate',
+        'ww_plate',
+        'chassis_number',
         'vehicle_type',
         'brand',
         'fuel_type',
@@ -534,9 +538,9 @@ export default function Import() {
       ]
       const csvContent = [
         headers.join(','),
-        'T535,AB-12345,camion,Mercedes,Diesel,2020-03-15,camion benne 8x4,active,320,26000,"Véhicule de chantier"',
-        'C320,CD-67890,camion,Volvo,Diesel,2019-11-20,plateau 12M,active,280,40000,',
-        'M500,EF-11223,minibus,Iveco,Diesel,2021-06-10,minibus 30 places,sold,180,4600,',
+        'T535,AB-12345,WW-123456,VF1AB123456789012,camion,Mercedes,Diesel,2020-03-15,camion benne 8x4,active,320,26000,"Véhicule de chantier"',
+        'C320,CD-67890,,,camion,Volvo,Diesel,2019-11-20,plateau 12M,active,280,40000,',
+        'M500,EF-11223,,,minibus,Iveco,Diesel,2021-06-10,minibus 30 places,sold,180,4600,',
       ].join('\n')
       downloadFile(csvContent, 'import-vehicles-template.csv', 'text/csv')
     }
@@ -802,6 +806,8 @@ export default function Import() {
         { key: 'rowNumber', label: t('import.rowCol'), render: (r) => <span className="font-medium text-foreground">#{r.rowNumber}</span> },
         { key: 'code', label: t('import.fields.code'), render: (r) => <span className="font-semibold text-foreground">{r.values.code || '-'}</span> },
         { key: 'registration_plate', label: t('import.fields.registration_plate'), render: (r) => r.values.registration_plate || '-' },
+        { key: 'ww_plate', label: t('import.fields.ww_plate'), render: (r) => r.values.ww_plate || '-' },
+        { key: 'chassis_number', label: t('import.fields.chassis_number'), render: (r) => r.values.chassis_number || '-' },
         { key: 'vehicle_type', label: t('import.fields.vehicle_type'), render: (r) => r.values.vehicle_type || '-' },
         { key: 'brand', label: t('import.fields.brand'), render: (r) => r.values.brand || '-' },
         { key: 'fuel_type', label: t('import.fields.fuel_type'), render: (r) => r.values.fuel_type || '-' },

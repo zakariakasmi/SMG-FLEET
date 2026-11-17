@@ -234,6 +234,7 @@ export default function VehicleDetail() {
           <InfoItem label={t('vehicles.fuelType')} value={vehicle.fuel_type || '-'} />
           <InfoItem label={t('vehicles.category')} value={vehicle.category?.name || '-'} />
           <InfoItem label={t('vehicles.wwPlate')} value={vehicle.ww_plate || '-'} />
+          <InfoItem label={t('vehicles.chassisNumber')} value={vehicle.chassis_number || '-'} />
           <InfoItem label={t('vehicles.puissanceFiscale')} value={vehicle.puissance_fiscale ? formatNumber(vehicle.puissance_fiscale) : '-'} />
           <InfoItem label={t('vehicles.ptac')} value={vehicle.ptac ? formatNumber(vehicle.ptac) : '-'} />
           <InfoItem label={t('vehicles.purchaseDate')} value={formatDate(vehicle.purchase_date)} />

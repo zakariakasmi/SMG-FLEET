@@ -32,6 +32,8 @@ export const EXPORT_COLUMNS = {
   VEHICLE: [
     { key: 'code', label: 'Code' },
     { key: 'registration_plate', label: 'Registration Plate' },
+    { key: 'ww_plate', label: 'WW Plate' },
+    { key: 'chassis_number', label: 'Chassis Number' },
     { key: 'vehicle_type', label: 'Vehicle Type' },
     { key: 'brand', label: 'Brand' },
     { key: 'puissance_fiscale', label: 'Fiscal HP' },

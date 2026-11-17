@@ -172,6 +172,10 @@ export default function VehicleDrawer({ vehicle, isOpen, onClose, onChanged }) {
                     value={detailVehicle.ww_plate || '-'}
                   />
                   <Field
+                    label={t('vehicles.chassisNumber')}
+                    value={detailVehicle.chassis_number || '-'}
+                  />
+                  <Field
                     label={t('vehicles.vehicleType')}
                     value={getVehicleTypeLabel(detailVehicle.vehicle_type)}
                   />

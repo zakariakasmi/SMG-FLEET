@@ -13,6 +13,7 @@ const DEFAULT_VALUES = {
   code: '',
   registration_plate: '',
   ww_plate: '',
+  chassis_number: '',
   vehicle_type: '',
   brand: '',
   fuel_type: '',
@@ -55,6 +56,7 @@ export default function EditVehicleModal({ vehicle, isOpen, onClose, onSuccess }
       code: vehicle.code,
       registration_plate: vehicle.registration_plate,
       ww_plate: vehicle.ww_plate || '',
+      chassis_number: vehicle.chassis_number || '',
       vehicle_type: vehicle.vehicle_type,
       brand: vehicle.brand,
       fuel_type: vehicle.fuel_type,
@@ -180,6 +182,7 @@ export default function EditVehicleModal({ vehicle, isOpen, onClose, onSuccess }
       const vehicleData = {
         ...data,
         ww_plate: data.ww_plate?.trim() || null,
+        chassis_number: data.chassis_number?.trim() || null,
         vehicle_type: vehicleType.name,
         type_id: vehicleType.id,
         category_id: Number(categoryId),

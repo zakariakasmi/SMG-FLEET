@@ -260,6 +260,7 @@ export type Database = {
           updated_at: string | null
           vehicle_type: string
           ww_plate: string | null
+          chassis_number: string | null
         }
         Insert: {
           brand: string
@@ -280,6 +281,7 @@ export type Database = {
           updated_at?: string | null
           vehicle_type: string
           ww_plate?: string | null
+          chassis_number?: string | null
         }
         Update: {
           brand?: string
@@ -300,6 +302,7 @@ export type Database = {
           updated_at?: string | null
           vehicle_type?: string
           ww_plate?: string | null
+          chassis_number?: string | null
         }
         Relationships: [
           {
@@ -358,6 +361,7 @@ export type Database = {
           type_name: string | null
           vehicle_type: string | null
           ww_plate?: string | null
+          chassis_number?: string | null
         }
         Relationships: [
           {

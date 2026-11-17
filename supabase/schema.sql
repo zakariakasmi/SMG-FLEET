@@ -96,7 +96,9 @@ CREATE TABLE IF NOT EXISTS vehicles (
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
   ptac DECIMAL(10, 2),
-  puissance_fiscale SMALLINT
+  puissance_fiscale SMALLINT,
+  ww_plate VARCHAR(50),
+  chassis_number VARCHAR(100)
 );
 
 CREATE INDEX IF NOT EXISTS idx_vehicles_code ON vehicles(code);
@@ -187,7 +189,9 @@ SELECT
   v.category_id,
   vc.name as category_name,
   COUNT(c.id) as charge_count,
-  COALESCE(SUM(c.amount), 0) as total_charges
+  COALESCE(SUM(c.amount), 0) as total_charges,
+  v.ww_plate,
+  v.chassis_number
 FROM vehicles v
 LEFT JOIN vehicle_categories vc ON v.category_id = vc.id
 LEFT JOIN vehicle_types vt ON v.type_id = vt.id
@@ -197,7 +201,7 @@ LEFT JOIN charges c ON v.id = c.vehicle_id AND c.year = EXTRACT(YEAR FROM NOW())
 GROUP BY v.id, v.code, v.registration_plate, v.vehicle_type, v.type_id, vt.name,
          v.brand, v.brand_id, b.name, v.fuel_type, v.fuel_type_id, ft.name,
          v.purchase_date, v.status, v.notes, v.ptac, v.puissance_fiscale,
-         v.category_id, vc.name;
+         v.category_id, vc.name, v.ww_plate, v.chassis_number;
 
 ALTER VIEW vehicle_summary SET (security_invoker = true);
 
@@ -236,7 +240,9 @@ AS $$
     v.category_id,
     vc.name AS category_name,
     COUNT(c.id) AS charge_count,
-    COALESCE(SUM(c.amount), 0) AS total_charges
+    COALESCE(SUM(c.amount), 0) AS total_charges,
+    v.ww_plate,
+    v.chassis_number
   FROM vehicles v
   LEFT JOIN vehicle_categories vc ON v.category_id = vc.id
   LEFT JOIN vehicle_types vt ON v.type_id = vt.id
@@ -246,7 +252,7 @@ AS $$
   GROUP BY v.id, v.code, v.registration_plate, v.vehicle_type, v.type_id, vt.name,
            v.brand, v.brand_id, b.name, v.fuel_type, v.fuel_type_id, ft.name,
            v.purchase_date, v.status, v.notes, v.ptac, v.puissance_fiscale,
-           v.category_id, vc.name;
+           v.category_id, vc.name, v.ww_plate, v.chassis_number;
 $$;
 
 GRANT EXECUTE ON FUNCTION vehicle_summary_for_year(int) TO authenticated, service_role;

@@ -84,6 +84,8 @@ const EXPORT_TYPES = [
 const VEHICLE_COLUMN_KEYS = [
   { key: 'code', labelKey: 'columns.code' },
   { key: 'registration_plate', labelKey: 'columns.registrationPlate' },
+  { key: 'ww_plate', labelKey: 'columns.wwPlate' },
+  { key: 'chassis_number', labelKey: 'columns.chassisNumber' },
   { key: 'vehicle_type', labelKey: 'columns.vehicleType' },
   { key: 'brand', labelKey: 'columns.brand' },
   { key: 'puissance_fiscale', labelKey: 'columns.puissanceFiscale' },
@@ -327,6 +329,7 @@ export default function Export() {
           v.code?.toUpperCase().includes(q) ||
           v.registration_plate?.toUpperCase().includes(q) ||
           v.ww_plate?.toUpperCase().includes(q) ||
+          v.chassis_number?.toUpperCase().includes(q) ||
           v.brand?.toUpperCase().includes(q) ||
           v.model?.toUpperCase().includes(q)
       )

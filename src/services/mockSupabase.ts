@@ -85,6 +85,7 @@ function createInitialDb(): Record<string, Row[]> {
         code: 'SMG-001',
         registration_plate: '12345-A-1',
         ww_plate: null,
+        chassis_number: null,
         vehicle_type: 'Tracteur',
         type_id: 4,
         brand: 'MAN',
@@ -105,6 +106,7 @@ function createInitialDb(): Record<string, Row[]> {
         code: 'SMG-002',
         registration_plate: '23456-B-1',
         ww_plate: null,
+        chassis_number: null,
         vehicle_type: 'Benne',
         type_id: 1,
         brand: 'IVECO',
@@ -125,6 +127,7 @@ function createInitialDb(): Record<string, Row[]> {
         code: 'SMG-003',
         registration_plate: '34567-D-6',
         ww_plate: null,
+        chassis_number: null,
         vehicle_type: 'Camion plateau',
         type_id: 6,
         brand: 'RENAULT',
@@ -145,6 +148,7 @@ function createInitialDb(): Record<string, Row[]> {
         code: 'SMG-004',
         registration_plate: '45678-E-1',
         ww_plate: null,
+        chassis_number: null,
         vehicle_type: 'Pickup',
         type_id: 3,
         brand: 'MITSUBISHI',
@@ -413,6 +417,7 @@ export function createMockSupabaseClient() {
         code: v.code,
         registration_plate: v.registration_plate,
         ww_plate: v.ww_plate ?? null,
+        chassis_number: v.chassis_number ?? null,
         vehicle_type: v.vehicle_type,
         type_id: v.type_id ?? null,
         type_name: vt?.name ?? null,
@@ -563,6 +568,9 @@ export function createMockSupabaseClient() {
       }
       if (!row.status) row.status = 'open'
       if (!row.created_by) row.created_by = currentSession?.user?.id ?? '00000000-0000-4000-8000-000000000001'
+    }
+    if (table === 'vehicles' && !row.status) {
+      row.status = 'active'
     }
     return row
   }

@@ -23,13 +23,14 @@ async function fetchAllRows(buildQuery) {
   return rows
 }
 
-function isMissingWwPlateError(error) {
-  const msg = String(error?.message || '')
-  const details = String(error?.details || '')
-  return (
-    (error?.code === '42703' || error?.code === 'PGRST204') &&
-    (msg.includes('ww_plate') || details.includes('ww_plate'))
-  )
+function getMissingOptionalColumns(error) {
+  const code = error?.code
+  if (code !== '42703' && code !== 'PGRST204') return []
+  const text = `${error?.message || ''} ${error?.details || ''}`
+  const cols = []
+  if (text.includes('ww_plate')) cols.push('ww_plate')
+  if (text.includes('chassis_number')) cols.push('chassis_number')
+  return cols
 }
 
 // =====================================================
@@ -37,7 +38,7 @@ function isMissingWwPlateError(error) {
 // =====================================================
 export const vehiclesApi = {
   async list(filters = {}) {
-    const run = async (includeWw) => {
+    const run = async ({ includeWw, includeChassis }) => {
       let query = supabase
         .from('vehicles')
         .select(`
@@ -54,6 +55,7 @@ export const vehiclesApi = {
           `code.ilike.%${filters.search}%`,
           `registration_plate.ilike.%${filters.search}%`,
           ...(includeWw ? [`ww_plate.ilike.%${filters.search}%`] : []),
+          ...(includeChassis ? [`chassis_number.ilike.%${filters.search}%`] : []),
         ]
         query = query.or(clauses.join(','))
       }
@@ -67,9 +69,15 @@ export const vehiclesApi = {
       return query
     }
 
-    let { data, error } = await run(true)
-    if (error && isMissingWwPlateError(error)) {
-      ;({ data, error } = await run(false))
+    let includeWw = true
+    let includeChassis = true
+    let { data, error } = await run({ includeWw, includeChassis })
+    for (let attempt = 0; attempt < 2 && error; attempt++) {
+      const missing = getMissingOptionalColumns(error)
+      if (missing.length === 0) break
+      if (missing.includes('ww_plate')) includeWw = false
+      if (missing.includes('chassis_number')) includeChassis = false
+      ;({ data, error } = await run({ includeWw, includeChassis }))
     }
     if (error) throw error
     return data
@@ -98,6 +106,7 @@ export const vehiclesApi = {
       code: 'code',
       registration_plate: 'registration_plate',
       ww_plate: 'ww_plate',
+      chassis_number: 'chassis_number',
       vehicle_type: 'vehicle_type',
       brand: 'brand',
       status: 'status',
@@ -111,8 +120,10 @@ export const vehiclesApi = {
     const safePageSize = Math.max(1, parseInt(pageSize, 10) || 10)
     const from = (safePage - 1) * safePageSize
 
-    const runSearch = async ({ includeWw, extraSearchIds = [] }) => {
-      const column = !includeWw && sortBy === 'ww_plate' ? 'code' : SORTABLE[sortBy] || 'code'
+    const runSearch = async ({ includeWw, includeChassis, extraSearchIds = [] }) => {
+      const blockedSort =
+        (!includeWw && sortBy === 'ww_plate') || (!includeChassis && sortBy === 'chassis_number')
+      const column = blockedSort ? 'code' : SORTABLE[sortBy] || 'code'
       let query = supabase
         .rpc('vehicle_summary_for_year', { p_year: Number(year) || new Date().getFullYear() }, { count: 'exact' })
         .order(column, { ascending })
@@ -122,6 +133,7 @@ export const vehiclesApi = {
           `code.ilike.%${search}%`,
           `registration_plate.ilike.%${search}%`,
           ...(includeWw ? [`ww_plate.ilike.%${search}%`] : []),
+          ...(includeChassis ? [`chassis_number.ilike.%${search}%`] : []),
           `vehicle_type.ilike.%${search}%`,
           `brand.ilike.%${search}%`,
           `category_name.ilike.%${search}%`,
@@ -140,27 +152,61 @@ export const vehiclesApi = {
       return query
     }
 
-    let { data, count, error } = await runSearch({ includeWw: true })
-    if (error && isMissingWwPlateError(error)) {
-      let extraSearchIds = []
+    let includeWw = true
+    let includeChassis = true
+    let { data, count, error } = await runSearch({ includeWw, includeChassis })
+    for (let attempt = 0; attempt < 2 && error; attempt++) {
+      const missing = getMissingOptionalColumns(error)
+      if (missing.length === 0) break
+      if (missing.includes('ww_plate')) includeWw = false
+      if (missing.includes('chassis_number')) includeChassis = false
+
+      const extraIdsSet = new Set()
       if (search) {
-        const wwMatch = await supabase.from('vehicles').select('id').ilike('ww_plate', `%${search}%`)
-        if (!wwMatch.error && wwMatch.data?.length) {
-          extraSearchIds = wwMatch.data.map((r) => r.id)
+        if (!includeWw) {
+          const wwMatch = await supabase.from('vehicles').select('id').ilike('ww_plate', `%${search}%`)
+          if (!wwMatch.error && wwMatch.data?.length) {
+            wwMatch.data.forEach((r) => extraIdsSet.add(r.id))
+          }
+        }
+        if (!includeChassis) {
+          const chMatch = await supabase.from('vehicles').select('id').ilike('chassis_number', `%${search}%`)
+          if (!chMatch.error && chMatch.data?.length) {
+            chMatch.data.forEach((r) => extraIdsSet.add(r.id))
+          }
         }
       }
-      ;({ data, count, error } = await runSearch({ includeWw: false, extraSearchIds }))
+      ;({ data, count, error } = await runSearch({
+        includeWw,
+        includeChassis,
+        extraSearchIds: [...extraIdsSet],
+      }))
     }
     if (error) throw error
 
     let rows = data || []
-    if (rows.length > 0 && !Object.prototype.hasOwnProperty.call(rows[0], 'ww_plate')) {
-      const ids = rows.map((r) => r.id).filter(Boolean)
-      if (ids.length > 0) {
-        const wwRes = await supabase.from('vehicles').select('id, ww_plate').in('id', ids)
-        if (!wwRes.error && wwRes.data) {
-          const byId = new Map(wwRes.data.map((r) => [r.id, r.ww_plate ?? null]))
-          rows = rows.map((r) => ({ ...r, ww_plate: byId.get(r.id) ?? null }))
+    if (rows.length > 0) {
+      const missingFields = ['ww_plate', 'chassis_number'].filter(
+        (field) => !Object.prototype.hasOwnProperty.call(rows[0], field)
+      )
+      if (missingFields.length > 0) {
+        const ids = rows.map((r) => r.id).filter(Boolean)
+        if (ids.length > 0) {
+          const extraRes = await supabase
+            .from('vehicles')
+            .select(['id', ...missingFields].join(', '))
+            .in('id', ids)
+          if (!extraRes.error && extraRes.data) {
+            const byId = new Map(extraRes.data.map((r) => [r.id, r]))
+            rows = rows.map((r) => {
+              const extra = byId.get(r.id)
+              const patched = { ...r }
+              missingFields.forEach((field) => {
+                patched[field] = extra?.[field] ?? null
+              })
+              return patched
+            })
+          }
         }
       }
     }
@@ -211,29 +257,51 @@ export const vehiclesApi = {
   },
 
   async create(vehicle) {
+    let payload = { ...vehicle, status: vehicle?.status || 'active' }
     let { data, error } = await supabase
       .from('vehicles')
-      .insert([vehicle])
+      .insert([payload])
       .select()
       .single()
-    if (error && isMissingWwPlateError(error) && 'ww_plate' in vehicle) {
-      const { ww_plate: _omitted, ...withoutWw } = vehicle
-      ;({ data, error } = await supabase.from('vehicles').insert([withoutWw]).select().single())
+    for (let attempt = 0; attempt < 2 && error; attempt++) {
+      const missing = getMissingOptionalColumns(error)
+      if (missing.length === 0) break
+      const nonEmptyMissing = missing.filter((col) => payload[col] !== null && payload[col] !== undefined && payload[col] !== '')
+      if (nonEmptyMissing.length > 0) {
+        throw new Error(
+          `Database column missing (${nonEmptyMissing.join(', ')}). Run supabase/2026-11-17-vehicle-chassis-number.sql in your Supabase SQL Editor.`
+        )
+      }
+      missing.forEach((col) => {
+        delete payload[col]
+      })
+      ;({ data, error } = await supabase.from('vehicles').insert([payload]).select().single())
     }
     if (error) throw error
     return data
   },
 
   async update(id, updates) {
+    let payload = { ...updates }
     let { data, error } = await supabase
       .from('vehicles')
-      .update(updates)
+      .update(payload)
       .eq('id', id)
       .select()
       .single()
-    if (error && isMissingWwPlateError(error) && 'ww_plate' in updates) {
-      const { ww_plate: _omitted, ...withoutWw } = updates
-      ;({ data, error } = await supabase.from('vehicles').update(withoutWw).eq('id', id).select().single())
+    for (let attempt = 0; attempt < 2 && error; attempt++) {
+      const missing = getMissingOptionalColumns(error)
+      if (missing.length === 0) break
+      const nonEmptyMissing = missing.filter((col) => payload[col] !== null && payload[col] !== undefined && payload[col] !== '')
+      if (nonEmptyMissing.length > 0) {
+        throw new Error(
+          `Database column missing (${nonEmptyMissing.join(', ')}). Run supabase/2026-11-17-vehicle-chassis-number.sql in your Supabase SQL Editor.`
+        )
+      }
+      missing.forEach((col) => {
+        delete payload[col]
+      })
+      ;({ data, error } = await supabase.from('vehicles').update(payload).eq('id', id).select().single())
     }
     if (error) throw error
     return data

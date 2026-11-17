@@ -13,6 +13,7 @@ export default function VehicleInfoFields({
   existingCategories,
   existingFuelTypes,
   codeDisabled,
+  statusDisabled = false,
 }) {
   const fuelTypeOptions = (existingFuelTypes || []).map((ft) => ({ value: ft, label: ft }))
 
@@ -45,6 +46,13 @@ export default function VehicleInfoFields({
         placeholder={t('vehicles.wwPlateExample')}
         error={errors.ww_plate?.message}
         {...register('ww_plate')}
+      />
+
+      <Input
+        label={t('vehicles.chassisNumber')}
+        placeholder={t('vehicles.chassisNumberExample')}
+        error={errors.chassis_number?.message}
+        {...register('chassis_number')}
       />
 
       <Controller
@@ -130,6 +138,7 @@ export default function VehicleInfoFields({
         label={t('common.status')}
         options={statusOptions}
         required
+        disabled={statusDisabled}
         error={errors.status?.message}
         {...register('status')}
       />

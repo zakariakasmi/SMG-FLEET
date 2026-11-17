@@ -100,6 +100,7 @@ export default function VehicleForm() {
       code: '',
       registration_plate: '',
       ww_plate: '',
+      chassis_number: '',
       vehicle_type: '',
       brand: '',
       fuel_type: '',
@@ -165,6 +166,7 @@ export default function VehicleForm() {
         code: vehicle.code,
         registration_plate: vehicle.registration_plate,
         ww_plate: vehicle.ww_plate || '',
+        chassis_number: vehicle.chassis_number || '',
         vehicle_type: vehicle.vehicle_type,
         brand: vehicle.brand,
         fuel_type: vehicle.fuel_type,
@@ -191,6 +193,7 @@ export default function VehicleForm() {
         code: '',
         registration_plate: vehicle.registration_plate,
         ww_plate: vehicle.ww_plate || '',
+        chassis_number: vehicle.chassis_number || '',
         vehicle_type: vehicle.vehicle_type,
         brand: vehicle.brand,
         fuel_type: vehicle.fuel_type,
@@ -286,6 +289,7 @@ export default function VehicleForm() {
     const vehicleData = {
       ...data,
       ww_plate: data.ww_plate?.trim() || null,
+      chassis_number: data.chassis_number?.trim() || null,
       vehicle_type: vehicleType.name,
       type_id: vehicleType.id,
       purchase_date: data.purchase_date || null,
@@ -293,6 +297,7 @@ export default function VehicleForm() {
       fuel_type_id: fuelTypeId,
       puissance_fiscale: data.puissance_fiscale ? Number(data.puissance_fiscale) : null,
       ptac: data.ptac ? Number(data.ptac) : null,
+      status: isEdit ? data.status : 'active',
     }
 
     if (isEdit) {
@@ -424,6 +429,7 @@ export default function VehicleForm() {
               existingCategories={existingCategories}
               existingFuelTypes={fuelTypes.map((f) => f.name)}
               codeDisabled={isEdit}
+              statusDisabled={!isEdit}
             />
 
             <div className="flex gap-3 pt-4 border-t border-border">

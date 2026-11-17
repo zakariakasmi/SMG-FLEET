@@ -98,7 +98,7 @@ export default function Table({
                   <th
                     key={column.key}
                     scope="col"
-                    className="px-5 py-3 text-left text-[12px] font-medium uppercase tracking-wider text-foreground"
+                    className="whitespace-nowrap px-5 py-3 text-left text-[12px] font-medium uppercase tracking-wider text-foreground"
                   >
                     {column.label}
                   </th>
@@ -143,12 +143,12 @@ export default function Table({
                 <th
                   key={column.key}
                   scope="col"
-                  className={`px-5 py-3 text-left text-[12px] font-medium uppercase tracking-wider text-foreground ${
+                  className={`whitespace-nowrap px-5 py-3 text-left text-[12px] font-medium uppercase tracking-wider text-foreground ${
                     column.sortable ? 'cursor-pointer select-none' : ''
                   }`}
                   onClick={() => column.sortable && handleSort(column.key)}
                 >
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <div className="flex items-center gap-1.5 whitespace-nowrap text-muted-foreground">
                     {column.label}
                     {column.sortable && activeSortColumn === column.key && (
                       <span className="text-primary">{activeSortDirection === 'asc' ? '↑' : '↓'}</span>

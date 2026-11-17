@@ -35,6 +35,18 @@ export const VEHICLE_TARGETS = [
     aliases: ['registration_plate', 'plaque', 'plaque_immatriculation', 'registration', 'matricule', 'plate', 'immatriculation'],
   },
   {
+    key: 'ww_plate',
+    required: false,
+    labelKey: 'import.fields.ww_plate',
+    aliases: ['ww_plate', 'ww', 'plaque_ww', 'matricule_ww', 'immatriculation_ww'],
+  },
+  {
+    key: 'chassis_number',
+    required: false,
+    labelKey: 'import.fields.chassis_number',
+    aliases: ['chassis_number', 'chassis', 'numero_chassis', 'numero_de_chassis', 'n_chassis', 'no_chassis', 'num_chassis', 'vin'],
+  },
+  {
     key: 'vehicle_type',
     required: true,
     labelKey: 'import.fields.vehicle_type',
@@ -66,7 +78,7 @@ export const VEHICLE_TARGETS = [
   },
   {
     key: 'status',
-    required: true,
+    required: false,
     labelKey: 'import.fields.status',
     aliases: ['status', 'statut', 'etat', 'state'],
   },
@@ -221,13 +233,15 @@ export function buildVehicleRow({ index, row, mapping, refData }) {
 
   const code = valueOf(row, mapping, 'code').toUpperCase()
   const registration_plate = valueOf(row, mapping, 'registration_plate').toUpperCase()
+  const ww_plate = valueOf(row, mapping, 'ww_plate').toUpperCase() || null
+  const chassis_number = valueOf(row, mapping, 'chassis_number').toUpperCase() || null
   const vehicle_type = valueOf(row, mapping, 'vehicle_type').toLowerCase()
   const brand = valueOf(row, mapping, 'brand')
   // Keep original casing: resolveByName matches case-insensitively, and newly
   // created fuel types should keep the spelling the caller provided.
   const fuel_type = valueOf(row, mapping, 'fuel_type')
   const category = valueOf(row, mapping, 'category')
-  const status = valueOf(row, mapping, 'status').toLowerCase()
+  const status = valueOf(row, mapping, 'status').toLowerCase() || 'active'
   const notes = valueOf(row, mapping, 'notes') || null
 
   if (!code) {
@@ -251,9 +265,7 @@ export function buildVehicleRow({ index, row, mapping, refData }) {
     }
   }
 
-  if (!status) {
-    issues.push(issue('status', 'import.errors.required'))
-  } else if (!['active', 'sold'].includes(status)) {
+  if (!['active', 'sold'].includes(status)) {
     issues.push(issue('status', 'import.errors.invalidStatus'))
   }
 
@@ -302,6 +314,8 @@ export function buildVehicleRow({ index, row, mapping, refData }) {
     values: {
       code,
       registration_plate,
+      ww_plate,
+      chassis_number,
       vehicle_type,
       brand,
       fuel_type,

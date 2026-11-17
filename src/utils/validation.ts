@@ -16,6 +16,11 @@ export const vehicleSchema = z.object({
     .max(50, 'La plaque WW ne doit pas dépasser 50 caractères')
     .optional()
     .or(z.literal('')),
+  chassis_number: z
+    .string()
+    .max(100, 'Le numéro de châssis ne doit pas dépasser 100 caractères')
+    .optional()
+    .or(z.literal('')),
   vehicle_type: z.string().min(1, 'Le type de véhicule est requis'),
   brand: z.string().min(1, 'La marque est requise'),
   fuel_type: z.string().min(1, 'Le type de carburant est requis'),
@@ -23,7 +28,7 @@ export const vehicleSchema = z.object({
   puissance_fiscale: z.union([z.number(), z.string()]).optional(),
   ptac: z.union([z.number(), z.string()]).optional(),
     category_id: z.union([z.number().min(1), z.string().min(1, 'La catégorie est requise')]),
-  status: z.enum(['active', 'sold']),
+  status: z.enum(['active', 'sold']).default('active'),
   notes: z.string().optional(),
 })
 
