@@ -67,6 +67,5 @@ export const DEMAND_ACCESS_SCOPES = [
 ]
 
 // Granted to every signed-in user without an explicit tick. The tachograph
-// module is NOT here: operations must be granted, a requester gets only the
-// demand book.
-export const READ_ONLY_SCOPES = ['vehicles', 'charges', 'export']
+// module and charges are NOT here: they must be granted explicitly.
+export const READ_ONLY_SCOPES = ['vehicles', 'export']

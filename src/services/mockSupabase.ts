@@ -507,6 +507,11 @@ export function createMockSupabaseClient() {
       if (op === 'eq') return String(rowVal) === String(rawVal)
       if (op === 'neq') return String(rowVal) !== String(rawVal)
       if (op === 'is') return rawVal === 'null' ? rowVal == null : String(rowVal) === rawVal
+      if (op === 'in') {
+        const inner = rawVal.replace(/^\(/, '').replace(/\)$/, '')
+        const vals = inner.split(',').map((s) => s.trim().replace(/^"(.*)"$/, '$1'))
+        return vals.includes(String(rowVal))
+      }
       return false
     })
   }
@@ -755,6 +760,11 @@ export function createMockSupabaseClient() {
       },
       ilike(col: string, pattern: string) {
         filters.push((r) => ilikeMatch(r[col], pattern))
+        return builder
+      },
+      in(col: string, vals: any[]) {
+        const allowed = new Set((vals || []).map((v) => String(v)))
+        filters.push((r) => allowed.has(String(r[col])))
         return builder
       },
       or(expr: string) {

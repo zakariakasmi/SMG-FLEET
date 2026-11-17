@@ -50,6 +50,7 @@ export default function VehicleDrawer({ vehicle, isOpen, onClose, onChanged }) {
   const { showToast } = useToast()
   const { selectedYear } = useYear()
 
+  const canViewCharges = can('charges')
   const [fullVehicle, setFullVehicle] = useState(null)
   const [charges, setCharges] = useState([])
   const [loading, setLoading] = useState(false)
@@ -64,7 +65,9 @@ export default function VehicleDrawer({ vehicle, isOpen, onClose, onChanged }) {
       try {
         const [v, c] = await Promise.all([
           vehiclesApi.getByCode(vehicle.code),
-          chargesApi.list({ vehicleId: vehicle.id, year: selectedYear }),
+          canViewCharges
+            ? chargesApi.list({ vehicleId: vehicle.id, year: selectedYear })
+            : Promise.resolve([]),
         ])
         if (cancelled) return
         setFullVehicle(v)
@@ -82,7 +85,7 @@ export default function VehicleDrawer({ vehicle, isOpen, onClose, onChanged }) {
     return () => {
       cancelled = true
     }
-  }, [isOpen, vehicle, selectedYear])
+  }, [isOpen, vehicle, selectedYear, canViewCharges])
 
   const detailVehicle = fullVehicle || vehicle
   const statusBadge = detailVehicle ? getStatusBadge(detailVehicle.status) : null
@@ -203,74 +206,80 @@ export default function VehicleDrawer({ vehicle, isOpen, onClose, onChanged }) {
                 </div>
               </section>
 
-              <section>
-                <SectionTitle>{t('vehicles.charges')}</SectionTitle>
-                {charges.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    {t('vehicles.noChargesYet')}
-                  </p>
-                ) : (
-                  <div className="overflow-hidden rounded-lg border border-border bg-card">
-                    {charges
-                      .slice()
-                      .sort((a, b) => Number(a.amount) - Number(b.amount))
-                      .map((c, i) => (
-                        <div
-                          key={c.id}
-                          className={`flex items-center justify-between px-4 py-2.5 ${
-                            i < charges.length - 1 ? 'border-b border-border' : ''
-                          }`}
-                        >
-                          <span className="text-[14px] text-foreground">
-                            {getChargeName(c)}
-                          </span>
-                          <span className="text-[14px] font-medium text-foreground">
-                            {formatCurrency(Number(c.amount))}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </section>
+              {canViewCharges && (
+                <>
+                  <section>
+                    <SectionTitle>{t('vehicles.charges')}</SectionTitle>
+                    {charges.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        {t('vehicles.noChargesYet')}
+                      </p>
+                    ) : (
+                      <div className="overflow-hidden rounded-lg border border-border bg-card">
+                        {charges
+                          .slice()
+                          .sort((a, b) => Number(a.amount) - Number(b.amount))
+                          .map((c, i) => (
+                            <div
+                              key={c.id}
+                              className={`flex items-center justify-between px-4 py-2.5 ${
+                                i < charges.length - 1 ? 'border-b border-border' : ''
+                              }`}
+                            >
+                              <span className="text-[14px] text-foreground">
+                                {getChargeName(c)}
+                              </span>
+                              <span className="text-[14px] font-medium text-foreground">
+                                {formatCurrency(Number(c.amount))}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </section>
 
-              <section>
-                <SectionTitle>{t('vehicles.sectionFinancial')}</SectionTitle>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-lg border border-border bg-muted/40 p-4">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                      {t('vehicles.totalCharges')}
-                    </p>
-                    <p className="mt-1 text-xl font-semibold text-foreground">
-                      {formatCurrency(totalCharges)}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-border bg-muted/40 p-4">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                      {t('dashboard.monthlyCharges')}
-                    </p>
-                    <p className="mt-1 text-xl font-semibold text-foreground">
-                      {formatCurrency(monthly)}
-                      <span className="text-[13px] font-medium text-muted-foreground">
-                        {t('common.perMonthSuffix')}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              </section>
+                  <section>
+                    <SectionTitle>{t('vehicles.sectionFinancial')}</SectionTitle>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="rounded-lg border border-border bg-muted/40 p-4">
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                          {t('vehicles.totalCharges')}
+                        </p>
+                        <p className="mt-1 text-xl font-semibold text-foreground">
+                          {formatCurrency(totalCharges)}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/40 p-4">
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                          {t('dashboard.monthlyCharges')}
+                        </p>
+                        <p className="mt-1 text-xl font-semibold text-foreground">
+                          {formatCurrency(monthly)}
+                          <span className="text-[13px] font-medium text-muted-foreground">
+                            {t('common.perMonthSuffix')}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+                </>
+              )}
             </div>
           )
         )}
       </Modal>
 
-      <EditVehicleChargesModal
-        isOpen={editChargesOpen}
-        onClose={() => setEditChargesOpen(false)}
-        vehicle={detailVehicle}
-        onSuccess={() => {
-          setEditChargesOpen(false)
-          loadFresh()
-        }}
-      />
+      {canViewCharges && can('editCharges') && (
+        <EditVehicleChargesModal
+          isOpen={editChargesOpen}
+          onClose={() => setEditChargesOpen(false)}
+          vehicle={detailVehicle}
+          onSuccess={() => {
+            setEditChargesOpen(false)
+            loadFresh()
+          }}
+        />
+      )}
 
       <EditVehicleModal
         isOpen={editOpen}
@@ -289,7 +298,9 @@ export default function VehicleDrawer({ vehicle, isOpen, onClose, onChanged }) {
     try {
       const [v, c] = await Promise.all([
         vehiclesApi.getByCode(vehicle.code),
-        chargesApi.list({ vehicleId: vehicle.id, year: selectedYear }),
+        canViewCharges
+          ? chargesApi.list({ vehicleId: vehicle.id, year: selectedYear })
+          : Promise.resolve([]),
       ])
       setFullVehicle(v)
       setCharges(c || [])

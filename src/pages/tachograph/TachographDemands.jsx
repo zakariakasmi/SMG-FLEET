@@ -192,6 +192,7 @@ export default function TachographDemands() {
         ...(row.items || []).flatMap((item) => [
           item.vehicle?.code,
           item.vehicle?.registration_plate,
+          item.vehicle?.ww_plate,
           kindLabel(item.kind),
         ]),
       ]
@@ -208,6 +209,7 @@ export default function TachographDemands() {
       if (!term) return null
       return (
         vehicles.find((v) => String(v.registration_plate || '').trim().toLowerCase() === term) ||
+        vehicles.find((v) => String(v.ww_plate || '').trim().toLowerCase() === term) ||
         vehicles.find((v) => String(v.code || '').trim().toLowerCase() === term) ||
         null
       )
@@ -688,11 +690,21 @@ export default function TachographDemands() {
             </div>
             <p className="mb-2 text-[12px] text-muted-foreground">{t('tachograph.demandLineHint')}</p>
             <datalist id="demand-vehicle-plates">
-              {vehicles.map((v) => (
-                <option key={v.id} value={v.registration_plate || ''}>
-                  {v.code}
-                </option>
-              ))}
+              {vehicles.flatMap((v) => {
+                const opts = [
+                  <option key={v.id} value={v.registration_plate || ''}>
+                    {v.code}
+                  </option>,
+                ]
+                if (v.ww_plate) {
+                  opts.push(
+                    <option key={`${v.id}-ww`} value={v.ww_plate}>
+                      {v.code} · {v.registration_plate}
+                    </option>
+                  )
+                }
+                return opts
+              })}
             </datalist>
             <div className="space-y-3">
               {form.items.map((item, index) => (

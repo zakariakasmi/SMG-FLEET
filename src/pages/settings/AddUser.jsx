@@ -44,12 +44,20 @@ export default function AddUser() {
   const isAdminForm = form.role === 'admin'
 
   const togglePermission = (key) => {
-    setForm((prev) => ({
-      ...prev,
-      permissions: prev.permissions.includes(key)
-        ? prev.permissions.filter((k) => k !== key)
-        : [...prev.permissions, key],
-    }))
+    const CHARGE_SUB_KEYS = ['addCharges', 'editCharges', 'deleteCharges']
+    setForm((prev) => {
+      const has = prev.permissions.includes(key)
+      let next
+      if (has) {
+        next = prev.permissions.filter((k) => k !== key && (key !== 'charges' || !CHARGE_SUB_KEYS.includes(k)))
+      } else {
+        next = [...prev.permissions, key]
+        if (CHARGE_SUB_KEYS.includes(key) && !next.includes('charges')) {
+          next.push('charges')
+        }
+      }
+      return { ...prev, permissions: next }
+    })
   }
 
   const goNext = () => {

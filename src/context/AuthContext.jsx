@@ -75,7 +75,11 @@ export function AuthProvider({ children }) {
     if (user.role === 'admin') return true
     if (!scope) return true
     if (READ_ONLY_SCOPES.includes(scope)) return true
-    return Array.isArray(user.permissions) && user.permissions.includes(scope)
+    const perms = Array.isArray(user.permissions) ? user.permissions : []
+    if (scope === 'addCharges' || scope === 'editCharges' || scope === 'deleteCharges') {
+      return perms.includes('charges') && perms.includes(scope)
+    }
+    return perms.includes(scope)
   }
 
   return (

@@ -27,6 +27,7 @@ import {
 } from '../../utils/importValidation'
 import { vehiclesApi, chargesApi, chargeTypesApi, categoriesApi, fuelTypesApi, vehicleTypesApi, importLogsApi } from '../../services/api'
 import { useToast } from '../../context/ToastContext'
+import { useAuth } from '../../context/AuthContext'
 import { useYear } from '../../context/YearContext'
 import Button from '../../components/ui/Button'
 import FileUpload from '../../components/ui/FileUpload'
@@ -46,7 +47,9 @@ export default function Import() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { showToast } = useToast()
+  const { can } = useAuth()
   const { selectedYear } = useYear()
+  const canAccessCharges = can('charges')
 
   const [step, setStep] = useState('upload')
 
@@ -78,6 +81,11 @@ export default function Import() {
   const [renewing, setRenewing] = useState(false)
 
   useEffect(() => {
+    if (!canAccessCharges) {
+      setImportType('vehicles')
+      setYears([])
+      return
+    }
     chargesApi
       .listYears()
       .then((yrs) => {
@@ -85,7 +93,7 @@ export default function Import() {
         setRenewSource((prev) => prev ?? String(selectedYear))
       })
       .catch(() => {})
-  }, [selectedYear])
+  }, [selectedYear, canAccessCharges])
 
   const handleRenew = async () => {
     const source = Number(renewSource)
@@ -110,7 +118,7 @@ export default function Import() {
     Promise.all([
       categoriesApi.list().catch(() => null),
       vehiclesApi.listKeys().catch(() => null),
-      chargeTypesApi.list().catch(() => null),
+      canAccessCharges ? chargeTypesApi.list().catch(() => null) : Promise.resolve([]),
     ])
       .then(([cats, vehKeys, cts]) => {
         if (!active) return
@@ -132,7 +140,7 @@ export default function Import() {
     return () => {
       active = false
     }
-  }, [retryKey])
+  }, [retryKey, canAccessCharges])
 
   const refData = useMemo(() => {
     const categoryById = new Map()
@@ -563,26 +571,28 @@ export default function Import() {
         {t('import.uploadTypeTitle')}
       </h2>
 
-      <div className="mb-6 flex gap-2 rounded-lg bg-muted/40 p-1">
-        <button
-          onClick={() => switchType('vehicles')}
-          className={`flex-1 rounded-md px-4 py-2.5 text-[15px] font-medium transition-all ${
-            importType === 'vehicles' ? 'bg-primary text-primary-foreground shadow-sm' : ''
-          }`}
-          style={importType !== 'vehicles' ? { color: mutedColor } : undefined}
-        >
-          {t('import.vehicles')}
-        </button>
-        <button
-          onClick={() => switchType('charges')}
-          className={`flex-1 rounded-md px-4 py-2.5 text-[15px] font-medium transition-all ${
-            importType === 'charges' ? 'bg-primary text-primary-foreground shadow-sm' : ''
-          }`}
-          style={importType !== 'charges' ? { color: mutedColor } : undefined}
-        >
-          {t('import.charges')}
-        </button>
-      </div>
+      {canAccessCharges && (
+        <div className="mb-6 flex gap-2 rounded-lg bg-muted/40 p-1">
+          <button
+            onClick={() => switchType('vehicles')}
+            className={`flex-1 rounded-md px-4 py-2.5 text-[15px] font-medium transition-all ${
+              importType === 'vehicles' ? 'bg-primary text-primary-foreground shadow-sm' : ''
+            }`}
+            style={importType !== 'vehicles' ? { color: mutedColor } : undefined}
+          >
+            {t('import.vehicles')}
+          </button>
+          <button
+            onClick={() => switchType('charges')}
+            className={`flex-1 rounded-md px-4 py-2.5 text-[15px] font-medium transition-all ${
+              importType === 'charges' ? 'bg-primary text-primary-foreground shadow-sm' : ''
+            }`}
+            style={importType !== 'charges' ? { color: mutedColor } : undefined}
+          >
+            {t('import.charges')}
+          </button>
+        </div>
+      )}
 
       <FileUpload
         accept=".csv,.xlsx,.xls"
@@ -1100,29 +1110,31 @@ export default function Import() {
 
       <>
       {/* Renew to next year */}
-      <Card>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold text-foreground">{t('import.renewTitle')}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{t('import.renewDescription')}</p>
+      {canAccessCharges && (
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-foreground">{t('import.renewTitle')}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">{t('import.renewDescription')}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Select
+                label={t('import.renewYear')}
+                value={renewSource ?? ''}
+                onChange={(e) => setRenewSource(e.target.value)}
+                options={years.map((y) => ({ value: String(y), label: String(y) }))}
+                placeholder={t('import.renewYear')}
+                className="w-28"
+                disabled={renewing}
+              />
+              <Button size="sm" onClick={handleRenew} disabled={renewing || !renewSource}>
+                <RefreshCw01 {...SF} className="h-4 w-4 mr-1.5" />
+                {renewing ? t('import.renewLoading') : t('import.renewAction', { target: renewSource ? Number(renewSource) + 1 : '' })}
+              </Button>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Select
-              label={t('import.renewYear')}
-              value={renewSource ?? ''}
-              onChange={(e) => setRenewSource(e.target.value)}
-              options={years.map((y) => ({ value: String(y), label: String(y) }))}
-              placeholder={t('import.renewYear')}
-              className="w-28"
-              disabled={renewing}
-            />
-            <Button size="sm" onClick={handleRenew} disabled={renewing || !renewSource}>
-              <RefreshCw01 {...SF} className="h-4 w-4 mr-1.5" />
-              {renewing ? t('import.renewLoading') : t('import.renewAction', { target: renewSource ? Number(renewSource) + 1 : '' })}
-            </Button>
-          </div>
-        </div>
-      </Card>
+        </Card>
+      )}
 
       {/* Stepper */}
       <div className="flex items-center gap-1 overflow-x-auto">

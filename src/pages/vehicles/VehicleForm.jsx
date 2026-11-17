@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { vehiclesApi, categoriesApi, vehicleTypesApi, fuelTypesApi, chargesApi, chargeTypesApi } from '../../services/api'
 import { vehicleSchema } from '../../utils/validation'
 import { useToast } from '../../context/ToastContext'
+import { useAuth } from '../../context/AuthContext'
 import { useYear } from '../../context/YearContext'
 import { useUnsaved } from '../../components/ui/UnsavedChangesGuard'
 import Button from '../../components/ui/Button'
@@ -65,8 +66,10 @@ export default function VehicleForm() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { showToast } = useToast()
+  const { can } = useAuth()
   const { selectedYear } = useYear()
   const { setDirty, markSaved, showGuard } = useUnsaved()
+  const canEditChargesStep = can('charges') && (can('addCharges') || can('editCharges'))
 
   const [loading, setLoading] = useState(false)
   const [categories, setCategories] = useState([])
@@ -310,6 +313,10 @@ export default function VehicleForm() {
       if (id === null) return
       setVehicleId(id)
       markSaved()
+      if (!canEditChargesStep) {
+        navigate(-1)
+        return
+      }
       await loadChargesForStep(id)
       setStep(2)
     } catch (error) {
@@ -397,11 +404,15 @@ export default function VehicleForm() {
         <h1 className="text-2xl font-bold mb-2 text-foreground">
           {isEdit ? t('vehicles.editVehicle') : t('vehicles.addVehicle')}
         </h1>
-        <div className="mb-8">
-          <StepIndicator t={t} step={step} />
-        </div>
+        {canEditChargesStep ? (
+          <div className="mb-8">
+            <StepIndicator t={t} step={step} />
+          </div>
+        ) : (
+          <div className="mb-6" />
+        )}
 
-        {step === 1 ? (
+        {step === 1 || !canEditChargesStep ? (
           <form onSubmit={goToCharges} className="space-y-6">
             <VehicleInfoFields
               t={t}
@@ -417,7 +428,7 @@ export default function VehicleForm() {
 
             <div className="flex gap-3 pt-4 border-t border-border">
               <Button type="submit" loading={loading}>
-                {t('common.next')}
+                {canEditChargesStep ? t('common.next') : t('common.save')}
               </Button>
               <Button type="button" variant="secondary" onClick={() => showGuard(() => navigate(-1))}>
                 {t('common.cancel')}

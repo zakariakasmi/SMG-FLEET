@@ -49,9 +49,11 @@ export default function VehicleDetail() {
   const [editChargeModalOpen, setEditChargeModalOpen] = useState(false)
   const [selectedCharge, setSelectedCharge] = useState(null)
 
+  const canViewCharges = can('charges')
+
   useEffect(() => {
     loadVehicle()
-  }, [code, selectedYear])
+  }, [code, selectedYear, canViewCharges])
 
   const loadVehicle = async () => {
     try {
@@ -60,8 +62,12 @@ export default function VehicleDetail() {
       const vehicleData = await vehiclesApi.getByCode(code)
       setVehicle(vehicleData)
 
-      const chargesData = await chargesApi.list({ vehicleId: vehicleData.id, year: selectedYear })
-      setCharges(chargesData || [])
+      if (canViewCharges) {
+        const chargesData = await chargesApi.list({ vehicleId: vehicleData.id, year: selectedYear })
+        setCharges(chargesData || [])
+      } else {
+        setCharges([])
+      }
     } catch (error) {
       console.error('Error loading vehicle:', error)
       setLoadError(true)
@@ -231,7 +237,9 @@ export default function VehicleDetail() {
           <InfoItem label={t('vehicles.puissanceFiscale')} value={vehicle.puissance_fiscale ? formatNumber(vehicle.puissance_fiscale) : '-'} />
           <InfoItem label={t('vehicles.ptac')} value={vehicle.ptac ? formatNumber(vehicle.ptac) : '-'} />
           <InfoItem label={t('vehicles.purchaseDate')} value={formatDate(vehicle.purchase_date)} />
-          <InfoItem label={t('vehicles.totalCharges')} value={formatCurrency(totalCharges)} accent />
+          {canViewCharges && (
+            <InfoItem label={t('vehicles.totalCharges')} value={formatCurrency(totalCharges)} accent />
+          )}
         </div>
 
         {vehicle.notes && (
@@ -242,53 +250,57 @@ export default function VehicleDetail() {
         )}
       </Card>
 
-      {/* Annual / Monthly Summary */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-lg p-5 border border-border bg-card">
-          <p className="text-[13px] font-medium text-muted-foreground">{t('vehicles.totalCharges')}</p>
-          <p className="text-3xl font-semibold mt-1 text-foreground">{formatCurrency(annualTotal)}</p>
-        </div>
-        <div className="rounded-lg p-5 border border-primary/20 bg-primary/10">
-          <p className="text-[13px] font-medium text-muted-foreground">{t('dashboard.monthlyCharges')}</p>
-          <p className="text-3xl font-semibold mt-1 text-foreground">{formatCurrency(monthlyTotal)}</p>
-        </div>
-      </div>
+      {canViewCharges && (
+        <>
+          {/* Annual / Monthly Summary */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="rounded-lg p-5 border border-border bg-card">
+              <p className="text-[13px] font-medium text-muted-foreground">{t('vehicles.totalCharges')}</p>
+              <p className="text-3xl font-semibold mt-1 text-foreground">{formatCurrency(annualTotal)}</p>
+            </div>
+            <div className="rounded-lg p-5 border border-primary/20 bg-primary/10">
+              <p className="text-[13px] font-medium text-muted-foreground">{t('dashboard.monthlyCharges')}</p>
+              <p className="text-3xl font-semibold mt-1 text-foreground">{formatCurrency(monthlyTotal)}</p>
+            </div>
+          </div>
 
-      {/* Charges */}
-      <Card padding={false}>
-        <div className="p-6 flex items-center justify-between border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">{t('vehicles.charges')}</h2>
-          {can('addCharges') && (
-            <Button onClick={() => setAddChargeModalOpen(true)}>
-              <Plus {...SF} className="w-4 h-4 mr-2" />
-              {t('vehicles.addCharge')}
-            </Button>
-          )}
-        </div>
-
-        {charges.length === 0 ? (
-          <EmptyState
-            title={t('vehicles.noChargesYet')}
-            description={t('vehicles.noChargesDesc')}
-            action={
-              can('addCharges') ? (
+          {/* Charges */}
+          <Card padding={false}>
+            <div className="p-6 flex items-center justify-between border-b border-border">
+              <h2 className="text-lg font-semibold text-foreground">{t('vehicles.charges')}</h2>
+              {can('addCharges') && (
                 <Button onClick={() => setAddChargeModalOpen(true)}>
-                  {t('vehicles.addFirstCharge')}
+                  <Plus {...SF} className="w-4 h-4 mr-2" />
+                  {t('vehicles.addCharge')}
                 </Button>
-              ) : undefined
-            }
-          />
-        ) : (
-          <Table
-            columns={chargeColumns}
-            data={charges}
-            onRowClick={can('editCharges') ? (row) => {
-              setSelectedCharge(row)
-              setEditChargeModalOpen(true)
-            } : undefined}
-          />
-        )}
-      </Card>
+              )}
+            </div>
+
+            {charges.length === 0 ? (
+              <EmptyState
+                title={t('vehicles.noChargesYet')}
+                description={t('vehicles.noChargesDesc')}
+                action={
+                  can('addCharges') ? (
+                    <Button onClick={() => setAddChargeModalOpen(true)}>
+                      {t('vehicles.addFirstCharge')}
+                    </Button>
+                  ) : undefined
+                }
+              />
+            ) : (
+              <Table
+                columns={chargeColumns}
+                data={charges}
+                onRowClick={can('editCharges') ? (row) => {
+                  setSelectedCharge(row)
+                  setEditChargeModalOpen(true)
+                } : undefined}
+              />
+            )}
+          </Card>
+        </>
+      )}
 
       <ConfirmModal
         isOpen={deleteModal}
@@ -300,22 +312,26 @@ export default function VehicleDetail() {
         loading={deleting}
       />
 
-      <AddChargeModal
-        isOpen={addChargeModalOpen}
-        onClose={() => setAddChargeModalOpen(false)}
-        vehicle={vehicle}
-        onSuccess={loadVehicle}
-      />
+      {canViewCharges && (
+        <>
+          <AddChargeModal
+            isOpen={addChargeModalOpen}
+            onClose={() => setAddChargeModalOpen(false)}
+            vehicle={vehicle}
+            onSuccess={loadVehicle}
+          />
 
-      <EditChargeModal
-        isOpen={editChargeModalOpen}
-        onClose={() => {
-          setEditChargeModalOpen(false)
-          setSelectedCharge(null)
-        }}
-        charge={selectedCharge}
-        onSuccess={loadVehicle}
-      />
+          <EditChargeModal
+            isOpen={editChargeModalOpen}
+            onClose={() => {
+              setEditChargeModalOpen(false)
+              setSelectedCharge(null)
+            }}
+            charge={selectedCharge}
+            onSuccess={loadVehicle}
+          />
+        </>
+      )}
     </div>
   )
 }

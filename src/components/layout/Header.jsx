@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Menu01, Globe01, Sun, Moon01 } from '@untitledui/icons'
 import { useTheme } from '../../context/ThemeContext'
 import { useYear } from '../../context/YearContext'
+import { useAuth } from '../../context/AuthContext'
 import NotificationBell from './NotificationBell'
 
 const SF_PROPS = { strokeWidth: 1.75, fill: 'none' }
@@ -10,7 +11,9 @@ export default function Header({ onMenuClick }) {
   const { t, i18n } = useTranslation()
   const { theme, toggleTheme } = useTheme()
   const { selectedYear, setYear, availableYears } = useYear()
+  const { can } = useAuth()
   const isDark = theme === 'dark'
+  const canViewCharges = can('charges')
 
   const yearOptions =
     selectedYear && !availableYears.includes(selectedYear)
@@ -43,20 +46,24 @@ export default function Header({ onMenuClick }) {
           <NotificationBell />
 
           <div className="inline-flex items-center gap-0.5 rounded-lg border border-border bg-muted/40 p-0.5">
-            <select
-              value={selectedYear}
-              onChange={(e) => setYear(Number(e.target.value))}
-              aria-label={t('sidebar.year')}
-              className="flex h-8 items-center rounded-md border border-border bg-background px-2.5 text-[13px] font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-            >
-              {yearOptions.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
+            {canViewCharges && (
+              <>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setYear(Number(e.target.value))}
+                  aria-label={t('sidebar.year')}
+                  className="flex h-8 items-center rounded-md border border-border bg-background px-2.5 text-[13px] font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                >
+                  {yearOptions.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
 
-            <div className="h-5 w-px bg-border" />
+                <div className="h-5 w-px bg-border" />
+              </>
+            )}
 
             <button
               onClick={toggleLanguage}

@@ -37,7 +37,9 @@ export default function VehiclesList() {
   const categoryFilter = searchParams.get('category') || ''
   const hpFilter = searchParams.get('hp') || ''
   const tonnageFilter = searchParams.get('tonnage') || ''
-  const sortBy = searchParams.get('sort') || 'code'
+  const canViewCharges = can('charges')
+  const rawSortBy = searchParams.get('sort') || 'code'
+  const sortBy = !canViewCharges && rawSortBy === 'total_charges' ? 'code' : rawSortBy
   const sortDir = searchParams.get('dir') || 'asc'
   const pageParam = parseInt(searchParams.get('page') || '1', 10)
   const currentPage = isNaN(pageParam) || pageParam < 1 ? 1 : pageParam
@@ -235,6 +237,12 @@ export default function VehiclesList() {
       sortable: true,
     },
     {
+      key: 'ww_plate',
+      label: t('vehicles.wwPlate'),
+      sortable: true,
+      render: (row) => row.ww_plate || '-',
+    },
+    {
       key: 'vehicle_type',
       label: t('vehicles.vehicleType'),
       sortable: true,
@@ -263,12 +271,16 @@ export default function VehiclesList() {
       sortable: true,
       render: (row) => formatNumber(row.ptac),
     },
-    {
-      key: 'total_charges',
-      label: t('vehicles.annualCharges'),
-      sortable: true,
-      render: (row) => formatCurrency(row.total_charges),
-    },
+    ...(canViewCharges
+      ? [
+          {
+            key: 'total_charges',
+            label: t('vehicles.annualCharges'),
+            sortable: true,
+            render: (row) => formatCurrency(row.total_charges),
+          },
+        ]
+      : []),
     {
       key: 'status',
       label: t('common.status'),

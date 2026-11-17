@@ -47,16 +47,17 @@ export default function Dashboard() {
   const { showToast } = useToast()
   const { t } = useTranslation()
   const { can } = useAuth()
+  const canViewCharges = can('charges')
 
   useEffect(() => {
     loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedYear])
+  }, [selectedYear, canViewCharges])
 
   const loadData = async () => {
     try {
       setLoading(true)
-      const result = await dashboardApi.getDashboardData(selectedYear)
+      const result = await dashboardApi.getDashboardData(selectedYear, { includeCharges: canViewCharges })
       setData(result)
     } catch (error) {
       showToast(t('dashboard.failedToLoad'), 'error')
@@ -104,15 +105,23 @@ export default function Dashboard() {
   const categoryColumns = [
     { key: 'name', label: t('columns.category'), render: (row) => catName(row.name) },
     { key: 'vehicles', label: t('dashboard.vehicles'), render: (row) => formatNumber(row.vehicles) },
-    { key: 'totalCharges', label: t('columns.total'), render: (row) => currencyCell(row.totalCharges) },
-    { key: 'monthly', label: t('dashboard.monthlyCharges'), render: (row) => currencyCell(row.monthly) },
+    ...(canViewCharges
+      ? [
+          { key: 'totalCharges', label: t('columns.total'), render: (row) => currencyCell(row.totalCharges) },
+          { key: 'monthly', label: t('dashboard.monthlyCharges'), render: (row) => currencyCell(row.monthly) },
+        ]
+      : []),
   ]
 
   const brandColumns = [
     { key: 'brand', label: t('dashboard.brand'), render: (row) => row.brand || '—' },
     { key: 'vehicles', label: t('dashboard.vehicles'), render: (row) => formatNumber(row.vehicles) },
-    { key: 'total', label: t('columns.total'), render: (row) => currencyCell(row.total) },
-    { key: 'monthly', label: t('dashboard.monthlyCharges'), render: (row) => currencyCell(row.monthly) },
+    ...(canViewCharges
+      ? [
+          { key: 'total', label: t('columns.total'), render: (row) => currencyCell(row.total) },
+          { key: 'monthly', label: t('dashboard.monthlyCharges'), render: (row) => currencyCell(row.monthly) },
+        ]
+      : []),
   ]
 
   const breakdownColumns = [
@@ -144,31 +153,35 @@ export default function Dashboard() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className={`grid grid-cols-1 gap-6 ${canViewCharges ? 'md:grid-cols-3' : 'md:grid-cols-1 max-w-sm'}`}>
         <KpiCard
           title={t('dashboard.totalVehicles')}
           value={formatNumber(totalVehicles)}
           icon={Truck01}
           iconClassName="bg-primary/10 text-primary"
         />
-        <KpiCard
-          title={t('dashboard.totalCharges', { year: selectedYear })}
-          value={formatCurrency(grandTotal)}
-          icon={Dollar}
-          iconClassName="bg-success/10 text-success"
-        />
-        <KpiCard
-          title={t('dashboard.monthlyCharges')}
-          value={formatCurrency(monthlyTotal)}
-          icon={Calendar}
-          iconClassName="bg-warning/10 text-warning"
-        />
+        {canViewCharges && (
+          <>
+            <KpiCard
+              title={t('dashboard.totalCharges', { year: selectedYear })}
+              value={formatCurrency(grandTotal)}
+              icon={Dollar}
+              iconClassName="bg-success/10 text-success"
+            />
+            <KpiCard
+              title={t('dashboard.monthlyCharges')}
+              value={formatCurrency(monthlyTotal)}
+              icon={Calendar}
+              iconClassName="bg-warning/10 text-warning"
+            />
+          </>
+        )}
       </div>
 
       {/* Vehicles by Category */}
       <TableCard
         title={t('dashboard.vehiclesByCategory')}
-        subtitle={t('dashboard.annualTotal', { year: selectedYear })}
+        subtitle={canViewCharges ? t('dashboard.annualTotal', { year: selectedYear }) : undefined}
         columns={categoryColumns}
         rows={categories}
         empty={t('dashboard.emptyVehicles')}
@@ -178,7 +191,7 @@ export default function Dashboard() {
       {/* Vehicles by Brand */}
       <TableCard
         title={t('dashboard.vehiclesByBrand')}
-        subtitle={t('dashboard.annualTotal', { year: selectedYear })}
+        subtitle={canViewCharges ? t('dashboard.annualTotal', { year: selectedYear }) : undefined}
         columns={brandColumns}
         rows={brands}
         empty={t('dashboard.emptyBrands')}
@@ -186,24 +199,28 @@ export default function Dashboard() {
       />
 
       {/* Charges Breakdown */}
-      <TableCard
-        title={t('dashboard.chargesBreakdown')}
-        subtitle={t('dashboard.annualTotal', { year: selectedYear })}
-        columns={breakdownColumns}
-        rows={chargesByType}
-        empty={t('dashboard.emptyCharges', { year: selectedYear })}
-        paginate={false}
-      />
+      {canViewCharges && (
+        <TableCard
+          title={t('dashboard.chargesBreakdown')}
+          subtitle={t('dashboard.annualTotal', { year: selectedYear })}
+          columns={breakdownColumns}
+          rows={chargesByType}
+          empty={t('dashboard.emptyCharges', { year: selectedYear })}
+          paginate={false}
+        />
+      )}
 
       {/* Vehicle Charges */}
-      <TableCard
-        title={t('dashboard.vehicleCharges')}
-        subtitle={t('dashboard.vehicleChargesSubtitle', { year: selectedYear })}
-        columns={vehicleChargeColumns}
-        rows={vehicleCharges}
-        empty={t('dashboard.emptyCharges', { year: selectedYear })}
-        paginate={vehicleCharges.length > 10}
-      />
+      {canViewCharges && (
+        <TableCard
+          title={t('dashboard.vehicleCharges')}
+          subtitle={t('dashboard.vehicleChargesSubtitle', { year: selectedYear })}
+          columns={vehicleChargeColumns}
+          rows={vehicleCharges}
+          empty={t('dashboard.emptyCharges', { year: selectedYear })}
+          paginate={vehicleCharges.length > 10}
+        />
+      )}
 
       {/* Getting Started */}
       {totalVehicles === 0 && (

@@ -23,33 +23,54 @@ async function fetchAllRows(buildQuery) {
   return rows
 }
 
+function isMissingWwPlateError(error) {
+  const msg = String(error?.message || '')
+  const details = String(error?.details || '')
+  return (
+    (error?.code === '42703' || error?.code === 'PGRST204') &&
+    (msg.includes('ww_plate') || details.includes('ww_plate'))
+  )
+}
+
 // =====================================================
 // VEHICLES
 // =====================================================
 export const vehiclesApi = {
   async list(filters = {}) {
-    let query = supabase
-      .from('vehicles')
-      .select(`
-        *,
-        category:vehicle_categories(id, name)
-      `)
-      .order('created_at', { ascending: false })
+    const run = async (includeWw) => {
+      let query = supabase
+        .from('vehicles')
+        .select(`
+          *,
+          category:vehicle_categories(id, name)
+        `)
+        .order('created_at', { ascending: false })
 
-    if (filters.status) {
-      query = query.eq('status', filters.status)
-    }
-    if (filters.search) {
-      query = query.or(`code.ilike.%${filters.search}%,registration_plate.ilike.%${filters.search}%`)
-    }
-    if (filters.categoryId) {
-      query = query.eq('category_id', filters.categoryId)
-    }
-    if (filters.limit) {
-      query = query.limit(filters.limit)
+      if (filters.status) {
+        query = query.eq('status', filters.status)
+      }
+      if (filters.search) {
+        const clauses = [
+          `code.ilike.%${filters.search}%`,
+          `registration_plate.ilike.%${filters.search}%`,
+          ...(includeWw ? [`ww_plate.ilike.%${filters.search}%`] : []),
+        ]
+        query = query.or(clauses.join(','))
+      }
+      if (filters.categoryId) {
+        query = query.eq('category_id', filters.categoryId)
+      }
+      if (filters.limit) {
+        query = query.limit(filters.limit)
+      }
+
+      return query
     }
 
-    const { data, error } = await query
+    let { data, error } = await run(true)
+    if (error && isMissingWwPlateError(error)) {
+      ;({ data, error } = await run(false))
+    }
     if (error) throw error
     return data
   },
@@ -76,6 +97,7 @@ export const vehiclesApi = {
     const SORTABLE = {
       code: 'code',
       registration_plate: 'registration_plate',
+      ww_plate: 'ww_plate',
       vehicle_type: 'vehicle_type',
       brand: 'brand',
       status: 'status',
@@ -84,33 +106,66 @@ export const vehiclesApi = {
       category_name: 'category_name',
       total_charges: 'total_charges',
     }
-    const column = SORTABLE[sortBy] || 'code'
     const ascending = sortDir !== 'desc'
-
-    let query = supabase
-      .rpc('vehicle_summary_for_year', { p_year: Number(year) || new Date().getFullYear() }, { count: 'exact' })
-      .order(column, { ascending })
-
-    if (search) {
-      query = query.or(
-        `code.ilike.%${search}%,registration_plate.ilike.%${search}%,vehicle_type.ilike.%${search}%,brand.ilike.%${search}%,category_name.ilike.%${search}%`
-      )
-    }
-    if (status) query = query.eq('status', status)
-    if (type) query = query.eq('vehicle_type', type)
-    if (brand) query = query.eq('brand', brand)
-    if (categoryId) query = query.eq('category_id', categoryId)
-    if (hp) query = query.eq('puissance_fiscale', Number(hp))
-    if (tonnage) query = query.eq('ptac', Number(tonnage))
-
     const safePage = Math.max(1, parseInt(page, 10) || 1)
     const safePageSize = Math.max(1, parseInt(pageSize, 10) || 10)
     const from = (safePage - 1) * safePageSize
-    query = query.range(from, from + safePageSize - 1)
 
-    const { data, count, error } = await query
+    const runSearch = async ({ includeWw, extraSearchIds = [] }) => {
+      const column = !includeWw && sortBy === 'ww_plate' ? 'code' : SORTABLE[sortBy] || 'code'
+      let query = supabase
+        .rpc('vehicle_summary_for_year', { p_year: Number(year) || new Date().getFullYear() }, { count: 'exact' })
+        .order(column, { ascending })
+
+      if (search) {
+        const clauses = [
+          `code.ilike.%${search}%`,
+          `registration_plate.ilike.%${search}%`,
+          ...(includeWw ? [`ww_plate.ilike.%${search}%`] : []),
+          `vehicle_type.ilike.%${search}%`,
+          `brand.ilike.%${search}%`,
+          `category_name.ilike.%${search}%`,
+          ...(extraSearchIds.length > 0 ? [`id.in.(${extraSearchIds.join(',')})`] : []),
+        ]
+        query = query.or(clauses.join(','))
+      }
+      if (status) query = query.eq('status', status)
+      if (type) query = query.eq('vehicle_type', type)
+      if (brand) query = query.eq('brand', brand)
+      if (categoryId) query = query.eq('category_id', categoryId)
+      if (hp) query = query.eq('puissance_fiscale', Number(hp))
+      if (tonnage) query = query.eq('ptac', Number(tonnage))
+
+      query = query.range(from, from + safePageSize - 1)
+      return query
+    }
+
+    let { data, count, error } = await runSearch({ includeWw: true })
+    if (error && isMissingWwPlateError(error)) {
+      let extraSearchIds = []
+      if (search) {
+        const wwMatch = await supabase.from('vehicles').select('id').ilike('ww_plate', `%${search}%`)
+        if (!wwMatch.error && wwMatch.data?.length) {
+          extraSearchIds = wwMatch.data.map((r) => r.id)
+        }
+      }
+      ;({ data, count, error } = await runSearch({ includeWw: false, extraSearchIds }))
+    }
     if (error) throw error
-    return { data: data || [], count: count || 0 }
+
+    let rows = data || []
+    if (rows.length > 0 && !Object.prototype.hasOwnProperty.call(rows[0], 'ww_plate')) {
+      const ids = rows.map((r) => r.id).filter(Boolean)
+      if (ids.length > 0) {
+        const wwRes = await supabase.from('vehicles').select('id, ww_plate').in('id', ids)
+        if (!wwRes.error && wwRes.data) {
+          const byId = new Map(wwRes.data.map((r) => [r.id, r.ww_plate ?? null]))
+          rows = rows.map((r) => ({ ...r, ww_plate: byId.get(r.id) ?? null }))
+        }
+      }
+    }
+
+    return { data: rows, count: count || 0 }
   },
 
   // Distinct brands plus the canonical vehicle types for the server-side filter
@@ -156,22 +211,30 @@ export const vehiclesApi = {
   },
 
   async create(vehicle) {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('vehicles')
       .insert([vehicle])
       .select()
       .single()
+    if (error && isMissingWwPlateError(error) && 'ww_plate' in vehicle) {
+      const { ww_plate: _omitted, ...withoutWw } = vehicle
+      ;({ data, error } = await supabase.from('vehicles').insert([withoutWw]).select().single())
+    }
     if (error) throw error
     return data
   },
 
   async update(id, updates) {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('vehicles')
       .update(updates)
       .eq('id', id)
       .select()
       .single()
+    if (error && isMissingWwPlateError(error) && 'ww_plate' in updates) {
+      const { ww_plate: _omitted, ...withoutWw } = updates
+      ;({ data, error } = await supabase.from('vehicles').update(withoutWw).eq('id', id).select().single())
+    }
     if (error) throw error
     return data
   },
@@ -655,7 +718,7 @@ export const usersApi = {
 // DASHBOARD
 // =====================================================
 export const dashboardApi = {
-  async getDashboardData(year) {
+  async getDashboardData(year, { includeCharges = true } = {}) {
     const targetYear = year || new Date().getFullYear()
 
     const [vehiclesRes, charges, chargeTypesRes, categoriesRes] = await Promise.all([
@@ -663,18 +726,22 @@ export const dashboardApi = {
         .from('vehicles')
         .select('id, status, category_id, brand, vehicle_type, code, registration_plate')
         .eq('status', 'active'),
-      fetchAllRows(() =>
-        supabase
-          .from('charges')
-          .select(`
-            amount,
-            vehicle:vehicles(id, category_id, brand, vehicle_type, code, registration_plate),
-            charge_type:charge_types(id, name, display_name)
-          `)
-          .eq('year', targetYear)
-          .order('id', { ascending: true })
-      ),
-      supabase.from('charge_types').select('id, name, display_name').order('id'),
+      includeCharges
+        ? fetchAllRows(() =>
+            supabase
+              .from('charges')
+              .select(`
+                amount,
+                vehicle:vehicles(id, category_id, brand, vehicle_type, code, registration_plate),
+                charge_type:charge_types(id, name, display_name)
+              `)
+              .eq('year', targetYear)
+              .order('id', { ascending: true })
+          )
+        : Promise.resolve([]),
+      includeCharges
+        ? supabase.from('charge_types').select('id, name, display_name').order('id')
+        : Promise.resolve({ data: [], error: null }),
       supabase.from('vehicle_categories').select('id, name').order('name'),
     ])
 
@@ -906,7 +973,7 @@ const DEFAULT_VAT_RATE = 20
 // The FK hint on the demand embed is mandatory: tacho_operations and
 // tacho_demands point at each other, so PostgREST answers PGRST201 (ambiguous
 // relationship) without it.
-const TACHO_OPERATION_SELECT = `
+const TACHO_OPERATION_SELECT_BASE = `
   *,
   vehicle:vehicles(id, code, registration_plate, vehicle_type, status),
   supplier:tacho_suppliers(id, name),
@@ -919,18 +986,40 @@ const TACHO_OPERATION_SELECT = `
   )
 `
 
+const TACHO_OPERATION_SELECT = `
+  *,
+  vehicle:vehicles(id, code, registration_plate, ww_plate, vehicle_type, status),
+  supplier:tacho_suppliers(id, name),
+  operation_type:tacho_operation_types(id, code, name_fr, name_en, default_interval_months, requires_certificate),
+  demand:tacho_demands!tacho_operations_demand_id_fkey(id, reference, status),
+  items:tacho_operation_items(
+    id, operation_id, operation_type_id, vehicle_id, quantity, unit_price, price,
+    operation_type:tacho_operation_types(id, code, name_fr, name_en),
+    vehicle:vehicles(id, code, registration_plate, ww_plate)
+  )
+`
+
 // A demand (bon de demande) is the site's request to the fleet manager: "this
 // vehicle needs a repair / a periodic inspection". It carries no supplier and
 // no BL/BC — those belong to the operation logged afterwards, which is why the
 // operation embed also brings `reference` (the BL) and `purchase_order` (the
 // BC) for the printable sheet. See
 // supabase/2026-11-12-tachograph-demands-simple.sql.
-const TACHO_DEMAND_SELECT = `
+const TACHO_DEMAND_SELECT_BASE = `
   *,
   operation:tacho_operations!tacho_demands_operation_id_fkey(id, performed_on, reference, purchase_order),
   items:tacho_demand_items(
     id, demand_id, vehicle_id, kind,
     vehicle:vehicles(id, code, registration_plate)
+  )
+`
+
+const TACHO_DEMAND_SELECT = `
+  *,
+  operation:tacho_operations!tacho_demands_operation_id_fkey(id, performed_on, reference, purchase_order),
+  items:tacho_demand_items(
+    id, demand_id, vehicle_id, kind,
+    vehicle:vehicles(id, code, registration_plate, ww_plate)
   )
 `
 
@@ -1240,10 +1329,10 @@ export const tachographApi = {
 
   // --- operations ---
   async listOperations(filters = {}) {
-    const buildQuery = () => {
+    const buildQuery = (selectStr) => () => {
       let query = supabase
         .from('tacho_operations')
-        .select(TACHO_OPERATION_SELECT)
+        .select(selectStr)
         .order('performed_on', { ascending: false })
         // Stable tiebreaker so .range() pagination never skips/duplicates rows.
         .order('id', { ascending: false })
@@ -1255,7 +1344,14 @@ export const tachographApi = {
       if (filters.to) query = query.lte('performed_on', filters.to)
       return query
     }
-    return fetchAllRows(buildQuery)
+    try {
+      return await fetchAllRows(buildQuery(TACHO_OPERATION_SELECT))
+    } catch (error) {
+      if (isMissingWwPlateError(error)) {
+        return fetchAllRows(buildQuery(TACHO_OPERATION_SELECT_BASE))
+      }
+      throw error
+    }
   },
 
   async createOperation(operation) {
@@ -1336,14 +1432,24 @@ export const tachographApi = {
   // Latest operation per vehicle that carries a next-due date. If a vehicle is
   // sold it has no future revision to book, so it is dropped here.
   async listDue() {
-    const rows = await fetchAllRows(() =>
+    const buildQuery = (selectStr) => () =>
       supabase
         .from('tacho_operations')
-        .select(TACHO_OPERATION_SELECT)
+        .select(selectStr)
         .not('next_due_on', 'is', null)
         .order('performed_on', { ascending: false })
         .order('id', { ascending: false })
-    )
+
+    let rows
+    try {
+      rows = await fetchAllRows(buildQuery(TACHO_OPERATION_SELECT))
+    } catch (error) {
+      if (isMissingWwPlateError(error)) {
+        rows = await fetchAllRows(buildQuery(TACHO_OPERATION_SELECT_BASE))
+      } else {
+        throw error
+      }
+    }
 
     const latest = new Map()
     for (const row of rows) {
@@ -1361,10 +1467,10 @@ export const tachographApi = {
   // one person. Callers pass it when the user is not a fleet manager; the same
   // rule is enforced by RLS, this keeps the query small and explicit.
   async listDemands(filters = {}) {
-    const buildQuery = () => {
+    const buildQuery = (selectStr) => () => {
       let query = supabase
         .from('tacho_demands')
-        .select(TACHO_DEMAND_SELECT)
+        .select(selectStr)
         .order('requested_on', { ascending: false })
         // Stable tiebreaker so .range() pagination never skips/duplicates rows.
         .order('id', { ascending: false })
@@ -1373,7 +1479,14 @@ export const tachographApi = {
       if (filters.createdBy) query = query.eq('created_by', filters.createdBy)
       return query
     }
-    return fetchAllRows(buildQuery)
+    try {
+      return await fetchAllRows(buildQuery(TACHO_DEMAND_SELECT))
+    } catch (error) {
+      if (isMissingWwPlateError(error)) {
+        return fetchAllRows(buildQuery(TACHO_DEMAND_SELECT_BASE))
+      }
+      throw error
+    }
   },
 
   // Demands still waiting for the fleet manager (En cours). Backs the header
@@ -1393,11 +1506,18 @@ export const tachographApi = {
   },
 
   async getDemand(id) {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('tacho_demands')
       .select(TACHO_DEMAND_SELECT)
       .eq('id', id)
       .single()
+    if (error && isMissingWwPlateError(error)) {
+      ;({ data, error } = await supabase
+        .from('tacho_demands')
+        .select(TACHO_DEMAND_SELECT_BASE)
+        .eq('id', id)
+        .single())
+    }
     if (error) throw error
     return data
   },

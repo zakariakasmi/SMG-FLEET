@@ -316,6 +316,7 @@ export default function TachographOperations() {
     if (!term) return null
     return (
       vehicles.find((v) => String(v.registration_plate || '').trim().toLowerCase() === term) ||
+      vehicles.find((v) => String(v.ww_plate || '').trim().toLowerCase() === term) ||
       vehicles.find((v) => String(v.code || '').trim().toLowerCase() === term) ||
       null
     )
@@ -577,7 +578,12 @@ export default function TachographOperations() {
       const haystack = [
         row.vehicle?.code,
         row.vehicle?.registration_plate,
-        ...(row.items || []).flatMap((item) => [item.vehicle?.code, item.vehicle?.registration_plate]),
+        row.vehicle?.ww_plate,
+        ...(row.items || []).flatMap((item) => [
+          item.vehicle?.code,
+          item.vehicle?.registration_plate,
+          item.vehicle?.ww_plate,
+        ]),
         row.supplier?.name,
         row.chantier,
         row.reference,
@@ -1305,11 +1311,21 @@ export default function TachographOperations() {
             </div>
             <p className="mb-2 text-[12px] text-muted-foreground">{t('tachograph.lineHint')}</p>
             <datalist id="tacho-vehicle-plates">
-              {vehicles.map((v) => (
-                <option key={v.id} value={v.registration_plate || ''}>
-                  {v.code}
-                </option>
-              ))}
+              {vehicles.flatMap((v) => {
+                const opts = [
+                  <option key={v.id} value={v.registration_plate || ''}>
+                    {v.code}
+                  </option>,
+                ]
+                if (v.ww_plate) {
+                  opts.push(
+                    <option key={`${v.id}-ww`} value={v.ww_plate}>
+                      {v.code} · {v.registration_plate}
+                    </option>
+                  )
+                }
+                return opts
+              })}
             </datalist>
             <datalist id="tacho-article-types">
               {types.map((ty) => (

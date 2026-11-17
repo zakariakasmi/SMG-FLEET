@@ -27,6 +27,7 @@ import { formatCurrency, formatDate } from '../../utils/formatters'
 import { vehicleAnnualTotal, vehicleMonthlyTotal } from '../../utils/calculations'
 import { generateExportFilename, downloadFile, generateCSV, generateExcel, generatePDF } from '../../utils/parsers'
 import { useToast } from '../../context/ToastContext'
+import { useAuth } from '../../context/AuthContext'
 import { useYear } from '../../context/YearContext'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
@@ -151,7 +152,14 @@ const parseCodesFile = (file) => {
 export default function Export() {
   const { t } = useTranslation()
   const { showToast } = useToast()
+  const { can } = useAuth()
   const { selectedYear } = useYear()
+  const canViewCharges = can('charges')
+
+  const availableExportTypes = useMemo(
+    () => (canViewCharges ? EXPORT_TYPES : EXPORT_TYPES.filter((et) => !et.includeCharges)),
+    [canViewCharges]
+  )
 
   const [step, setStep] = useState('type')
 
@@ -161,9 +169,11 @@ export default function Export() {
   const [loadError, setLoadError] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
 
-  const [exportType, setExportType] = useState('vehicles-charges')
-  const [includeCharges, setIncludeCharges] = useState(true)
-  const [selectedColumns, setSelectedColumns] = useState(EXPORT_TYPES[1].defaultColumns)
+  const [exportType, setExportType] = useState(canViewCharges ? 'vehicles-charges' : 'vehicles')
+  const [includeCharges, setIncludeCharges] = useState(canViewCharges)
+  const [selectedColumns, setSelectedColumns] = useState(
+    (canViewCharges ? EXPORT_TYPES[1] : EXPORT_TYPES[0]).defaultColumns
+  )
   const [exportFormat, setExportFormat] = useState('xlsx')
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -192,6 +202,16 @@ export default function Export() {
   }, [codesText, fileCodes])
 
   useEffect(() => {
+    if (!canViewCharges) {
+      setIncludeCharges(false)
+      setExportType((prev) => {
+        const current = EXPORT_TYPES.find((et) => et.id === prev)
+        return current?.includeCharges ? 'vehicles' : prev
+      })
+    }
+  }, [canViewCharges])
+
+  useEffect(() => {
     let active = true
     const loadData = async () => {
       setInitialLoading(true)
@@ -199,7 +219,7 @@ export default function Export() {
       try {
         const [vehicleData, chargesData] = await Promise.all([
           vehiclesApi.list(),
-          chargesApi.list({ year: selectedYear }),
+          canViewCharges ? chargesApi.list({ year: selectedYear }) : Promise.resolve([]),
         ])
         if (!active) return
         setVehicles(vehicleData || [])
@@ -214,7 +234,7 @@ export default function Export() {
     return () => {
       active = false
     }
-  }, [retryKey, selectedYear])
+  }, [retryKey, selectedYear, canViewCharges])
 
   const vehicleColumns = useMemo(
     () => VEHICLE_COLUMN_KEYS.map((c) => ({ key: c.key, label: t(c.labelKey) })),
@@ -306,6 +326,7 @@ export default function Export() {
         (v) =>
           v.code?.toUpperCase().includes(q) ||
           v.registration_plate?.toUpperCase().includes(q) ||
+          v.ww_plate?.toUpperCase().includes(q) ||
           v.brand?.toUpperCase().includes(q) ||
           v.model?.toUpperCase().includes(q)
       )
@@ -338,11 +359,11 @@ export default function Export() {
 
   const handleSwitchType = (id) => {
     if (id === exportType) return
-    const type = EXPORT_TYPES.find((et) => et.id === id)
+    const type = availableExportTypes.find((et) => et.id === id)
     if (!type) return
     setExportType(id)
     setSelectedColumns(type.defaultColumns)
-    setIncludeCharges(type.includeCharges)
+    setIncludeCharges(canViewCharges && type.includeCharges)
     setStep('type')
   }
 
@@ -395,18 +416,19 @@ export default function Export() {
 
   const exportColumnsSpec = useMemo(() => {
     const vehicleCols = vehicleColumns.filter((c) => selectedColumns.includes(c.key))
-    const chargeCols = includeCharges
+    const showCharges = canViewCharges && includeCharges
+    const chargeCols = showCharges
       ? costData.typeNames.map((name) => ({ key: `charge_${name}`, label: name }))
       : []
     const totalCols =
-      includeCharges && chargeCols.length > 0
+      showCharges && chargeCols.length > 0
         ? [
             { key: '_total', label: t('columns.total') },
             { key: '_monthly', label: t('export.monthly') },
           ]
         : []
     return [...vehicleCols, ...chargeCols, ...totalCols]
-  }, [vehicleColumns, selectedColumns, includeCharges, costData.typeNames, t])
+  }, [vehicleColumns, selectedColumns, canViewCharges, includeCharges, costData.typeNames, t])
 
   const buildRow = (vehicle) => {
     const row = {}
@@ -500,8 +522,8 @@ export default function Export() {
         <p className="mt-1 text-sm text-muted-foreground">{t('export.typeSubtitle')}</p>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {EXPORT_TYPES.map((type) => {
+      <div className={`mt-5 grid grid-cols-1 auto-rows-fr gap-3 sm:grid-cols-2 ${availableExportTypes.length > 2 ? 'lg:grid-cols-4' : ''}`}>
+        {availableExportTypes.map((type) => {
           const Icon = type.icon
           const isActive = exportType === type.id
           return (
@@ -722,42 +744,46 @@ export default function Export() {
         })}
       </div>
 
-      <div className="mt-5 flex items-center justify-between rounded-lg border border-border p-4">
-        <div>
-          <span className="text-[14px] font-semibold text-foreground">{t('export.includeCharges')}</span>
-          <p className="mt-0.5 text-[13px] text-muted-foreground">
-            {includeCharges
-              ? t('export.chargesOnNote', { count: costData.typeNames.length })
-              : t('export.chargesOffNote')}
-          </p>
-        </div>
-        <button
-          onClick={() => setIncludeCharges((v) => !v)}
-          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${includeCharges ? 'bg-primary' : 'bg-muted'}`}
-          aria-pressed={includeCharges}
-          aria-label={t('export.includeCharges')}
-        >
-          <span
-            className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-all ${includeCharges ? 'left-6' : 'left-1'}`}
-          />
-        </button>
-      </div>
+      {canViewCharges && (
+        <>
+          <div className="mt-5 flex items-center justify-between rounded-lg border border-border p-4">
+            <div>
+              <span className="text-[14px] font-semibold text-foreground">{t('export.includeCharges')}</span>
+              <p className="mt-0.5 text-[13px] text-muted-foreground">
+                {includeCharges
+                  ? t('export.chargesOnNote', { count: costData.typeNames.length })
+                  : t('export.chargesOffNote')}
+              </p>
+            </div>
+            <button
+              onClick={() => setIncludeCharges((v) => !v)}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${includeCharges ? 'bg-primary' : 'bg-muted'}`}
+              aria-pressed={includeCharges}
+              aria-label={t('export.includeCharges')}
+            >
+              <span
+                className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-all ${includeCharges ? 'left-6' : 'left-1'}`}
+              />
+            </button>
+          </div>
 
-      {includeCharges && costData.typeNames.length > 0 && (
-        <div className="mt-4">
-          <p className="mb-2 text-[13px] font-medium text-muted-foreground">{t('export.chargeColumns')}</p>
-          <div className="flex flex-wrap gap-1.5">
-            {costData.typeNames.map((name) => (
-              <span key={name} className="rounded-full bg-primary/10 px-2.5 py-1 text-[12px] font-semibold text-primary">
-                {name} · {costData.typeCounts.get(name) || 0}
-              </span>
-            ))}
-          </div>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            <span className="rounded-full bg-muted px-2.5 py-1 text-[12px] font-semibold text-muted-foreground">{t('columns.total')}</span>
-            <span className="rounded-full bg-muted px-2.5 py-1 text-[12px] font-semibold text-muted-foreground">{t('export.monthly')}</span>
-          </div>
-        </div>
+          {includeCharges && costData.typeNames.length > 0 && (
+            <div className="mt-4">
+              <p className="mb-2 text-[13px] font-medium text-muted-foreground">{t('export.chargeColumns')}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {costData.typeNames.map((name) => (
+                  <span key={name} className="rounded-full bg-primary/10 px-2.5 py-1 text-[12px] font-semibold text-primary">
+                    {name} · {costData.typeCounts.get(name) || 0}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                <span className="rounded-full bg-muted px-2.5 py-1 text-[12px] font-semibold text-muted-foreground">{t('columns.total')}</span>
+                <span className="rounded-full bg-muted px-2.5 py-1 text-[12px] font-semibold text-muted-foreground">{t('export.monthly')}</span>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <div className="mt-5">
